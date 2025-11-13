@@ -1,0 +1,463 @@
+[
+  {
+    "id": "M01",
+    "title": "Find your way home",
+    "track": "linux",
+    "kind": "terminal",
+    "minutes": 10,
+    "difficulty": "Foundation",
+    "summary": "A handoff is hiding in the filesystem. Follow the evidence.",
+    "lesson": [
+      "A path describes where a file lives. Absolute paths begin at /. Relative paths begin at your current working directory.",
+      "Use pwd to locate yourself, ls to inspect a directory, and cat to read a text file. Read before changing anything."
+    ],
+    "objective": "Read /home/learner/handoff.txt, then inspect /var/log/relay.log.",
+    "hints": [
+      "Start with pwd and ls.",
+      "Read handoff.txt in your home directory.",
+      "Run cat /home/learner/handoff.txt, then cat /var/log/relay.log."
+    ],
+    "quiz": [
+      "What makes a path absolute?",
+      "It starts with /",
+      "It contains a file extension",
+      "It belongs to root"
+    ],
+    "answer": 0,
+    "why": "An absolute path starts from the root directory, regardless of the current directory.",
+    "version": 1,
+    "commands": ["pwd", "ls", "cat handoff.txt", "cat /var/log/relay.log"]
+  },
+  {
+    "id": "M02",
+    "title": "Permission denied",
+    "track": "linux",
+    "kind": "terminal",
+    "minutes": 15,
+    "difficulty": "Foundation",
+    "summary": "Protect a secret while keeping its owner able to use it.",
+    "lesson": [
+      "Unix permissions are grouped by owner, group and other. Read is 4, write is 2 and execute is 1.",
+      "A private configuration file usually needs owner read/write, not execute permission or world-readable access. Broad chmod 777 fixes often create a security defect."
+    ],
+    "objective": "Set /home/learner/secret.env to owner read/write only (600).",
+    "hints": [
+      "Inspect the file with ls -l.",
+      "Owner read plus write is 4 + 2.",
+      "Run chmod 600 /home/learner/secret.env."
+    ],
+    "quiz": [
+      "What does 600 allow?",
+      "Everyone can read",
+      "Only the owner can read and write",
+      "Only root can execute"
+    ],
+    "answer": 1,
+    "why": "600 gives the owner read/write and gives group/other no permissions.",
+    "version": 1,
+    "commands": ["ls -l", "chmod 600 secret.env", "ls -l"]
+  },
+  {
+    "id": "M03",
+    "title": "The missing process",
+    "track": "linux",
+    "kind": "terminal",
+    "minutes": 15,
+    "difficulty": "Foundation",
+    "summary": "The Relay worker stopped. Restore it after reading the failure.",
+    "lesson": [
+      "A service is a long-running process that performs work. Its status and logs are separate pieces of evidence.",
+      "A restart can mitigate a failure without explaining it. Inspect the failure first, then verify the recovered service. This browser mission models a service manager, not a full Linux host."
+    ],
+    "objective": "Inspect the service log and restart the relay service.",
+    "hints": [
+      "Read /var/log/relay.log.",
+      "Check service relay status.",
+      "Use service relay restart, then service relay status."
+    ],
+    "quiz": [
+      "What does a successful restart prove?",
+      "The root cause is permanently fixed",
+      "The service has started again",
+      "No further verification is needed"
+    ],
+    "answer": 1,
+    "why": "Restarting proves only that the process restarted; root cause and end-to-end health still need investigation.",
+    "version": 1,
+    "commands": [
+      "cat /var/log/relay.log",
+      "service relay status",
+      "service relay restart"
+    ]
+  },
+  {
+    "id": "M04",
+    "title": "The full log directory",
+    "track": "linux",
+    "kind": "terminal",
+    "minutes": 15,
+    "difficulty": "Foundation",
+    "summary": "Recover disk space without destroying the audit trail.",
+    "lesson": [
+      "df reports filesystem utilization; du helps locate large directories or files. Check both before deleting data.",
+      "A noisy debug log can be truncated after its useful evidence is captured. An audit log may be required for investigation and should remain intact. The lab uses a bounded model of disk usage."
+    ],
+    "objective": "Inspect disk use and truncate /var/log/debug.log, preserving audit.log.",
+    "hints": [
+      "Run df -h and du -h /var/log.",
+      "The debug log is large; the audit log is required.",
+      "Run truncate -s 0 /var/log/debug.log."
+    ],
+    "quiz": [
+      "Why inspect before clearing logs?",
+      "To preserve useful evidence and required records",
+      "To make a restart slower",
+      "Because all logs are disposable"
+    ],
+    "answer": 0,
+    "why": "Space recovery should preserve evidence and respect retention requirements.",
+    "version": 1,
+    "commands": ["df -h", "du -h /var/log", "truncate -s 0 /var/log/debug.log"]
+  },
+  {
+    "id": "M05",
+    "title": "A pipeline that lies",
+    "track": "shell",
+    "kind": "config",
+    "minutes": 15,
+    "difficulty": "Foundation",
+    "summary": "A failing producer is hidden behind a successful consumer.",
+    "lesson": [
+      "By default, Bash returns the exit status of the last pipeline command. A failed producer can disappear behind a successful consumer.",
+      "Enable pipefail to make a pipeline fail when an earlier stage fails. It does not replace explicit handling of expected failures."
+    ],
+    "objective": "Add set -o pipefail or set -euo pipefail before the pipeline.",
+    "hints": [
+      "The final cat succeeds even when the producer fails.",
+      "Bash has a pipeline failure option.",
+      "Add set -o pipefail on its own line."
+    ],
+    "quiz": [
+      "Without pipefail, which status normally wins?",
+      "The first command",
+      "The last command",
+      "The largest process ID"
+    ],
+    "answer": 1,
+    "why": "Bash normally reports the final command status for a pipeline.",
+    "version": 1,
+    "path": "/home/learner/pipeline.sh",
+    "starter": "#!/bin/bash\n# Keep the producer and consumer below.\nfalse | cat\n",
+    "solution": "#!/bin/bash\nset -o pipefail\nfalse | cat\n"
+  },
+  {
+    "id": "M06",
+    "title": "Spaces break everything",
+    "track": "shell",
+    "kind": "config",
+    "minutes": 15,
+    "difficulty": "Foundation",
+    "summary": "Preserve a filename containing spaces.",
+    "lesson": [
+      "The shell performs word splitting on unquoted variable expansions. One filename can accidentally become several arguments.",
+      "Quote expansions when you want the value preserved as one argument. Double quotes allow variable expansion; single quotes preserve literal text."
+    ],
+    "objective": "Change the printf argument to \"$file\" so it prints exactly one path.",
+    "hints": [
+      "The variable contains one filename, not two.",
+      "Quote the variable at the point it is expanded.",
+      "Use printf \"%s\\n\" \"$file\"."
+    ],
+    "quiz": [
+      "What does \"$file\" preserve?",
+      "One argument containing the full value",
+      "A literal dollar sign",
+      "Only the first word"
+    ],
+    "answer": 0,
+    "why": "Double quoting keeps whitespace inside the expanded value from splitting it into separate arguments.",
+    "version": 1,
+    "path": "/home/learner/quote.sh",
+    "starter": "#!/bin/bash\nfile=\"incident report.txt\"\nprintf \"%s\\n\" $file\n",
+    "solution": "#!/bin/bash\nfile=\"incident report.txt\"\nprintf \"%s\\n\" \"$file\"\n"
+  },
+  {
+    "id": "M07",
+    "title": "Find the noisy client",
+    "track": "python",
+    "kind": "python",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "Turn access-log records into a useful error summary.",
+    "lesson": [
+      "A dictionary maps a key to its current count. A single pass over records makes counting linear in the number of records.",
+      "Keep the error definition explicit: status codes of 500 and above count here. Ignore successful requests. Test repeated clients and empty input."
+    ],
+    "objective": "Implement error_counts(records), returning counts of 5xx responses per client.",
+    "hints": [
+      "Start with an empty dictionary.",
+      "For each record, check status >= 500.",
+      "Use counts[client] = counts.get(client, 0) + 1."
+    ],
+    "quiz": [
+      "For n records, a dictionary-counting pass is usually\u2026",
+      "O(n\u00b2)",
+      "O(n)",
+      "O(1) total"
+    ],
+    "answer": 1,
+    "why": "Each record is processed once; dictionary updates are average constant time.",
+    "version": 1,
+    "starter": "def error_counts(records):\n    # Each record has client and status keys.\n    return {}\n",
+    "tests": "assert error_counts([]) == {}\nassert error_counts([{'client':'a','status':503},{'client':'b','status':200},{'client':'a','status':500}]) == {'a':2}\nassert error_counts([{'client':'b','status':501},{'client':'c','status':404}]) == {'b':1}",
+    "solution": "def error_counts(records):\n    counts = {}\n    for r in records:\n        if r['status'] >= 500:\n            counts[r['client']] = counts.get(r['client'], 0) + 1\n    return counts\n"
+  },
+  {
+    "id": "M08",
+    "title": "Build an incident summary",
+    "track": "python",
+    "kind": "python",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "Make a small, predictable tool for operational data.",
+    "lesson": [
+      "Separate parsing and calculation from presentation. A pure function is easier to test than a function that reads global state.",
+      "Represent an empty dataset deliberately. Return a defined error fraction rather than dividing by zero."
+    ],
+    "objective": "Implement summarize(statuses) returning total, errors and error_rate for 5xx statuses.",
+    "hints": [
+      "Count all inputs and 5xx inputs separately.",
+      "Return 0.0 for the empty error rate.",
+      "Use a conditional expression for division."
+    ],
+    "quiz": [
+      "Why separate calculation from I/O?",
+      "It avoids all tests",
+      "It makes behavior easier to test",
+      "It guarantees distributed correctness"
+    ],
+    "answer": 1,
+    "why": "Pure calculation can be tested without terminals, files or network dependencies.",
+    "version": 1,
+    "starter": "def summarize(statuses):\n    return {\"total\": 0, \"errors\": 0, \"error_rate\": 0.0}\n",
+    "tests": "assert summarize([]) == {'total':0,'errors':0,'error_rate':0.0}\nassert summarize([200,500,503,404]) == {'total':4,'errors':2,'error_rate':0.5}\nassert summarize([200])['errors'] == 0",
+    "solution": "def summarize(statuses):\n    total = len(statuses)\n    errors = sum(s >= 500 for s in statuses)\n    return {'total':total, 'errors':errors, 'error_rate':errors / total if total else 0.0}\n"
+  },
+  {
+    "id": "M09",
+    "title": "A retry that never ends",
+    "track": "python",
+    "kind": "python",
+    "minutes": 25,
+    "difficulty": "Core",
+    "summary": "Bound an operation that may keep failing.",
+    "lesson": [
+      "A retry policy needs a limit, retryable error classification and a timeout for each operation. Production clients also need backoff and jitter.",
+      "This exercise isolates the attempt limit: retry RuntimeError up to attempts times. Return the first success. Propagate the final error. Reject attempts below one."
+    ],
+    "objective": "Implement retry(operation, attempts). Do not catch unrelated exception types.",
+    "hints": [
+      "Use a bounded loop, not while True.",
+      "Re-raise RuntimeError on the final attempt.",
+      "Check attempts before invoking the operation."
+    ],
+    "quiz": [
+      "What else does production retrying need?",
+      "Unlimited retries",
+      "Per-call timeout and a bounded backoff policy",
+      "Ignoring all errors"
+    ],
+    "answer": 1,
+    "why": "Limits alone do not bound wall time if an individual call can hang.",
+    "version": 1,
+    "starter": "def retry(operation, attempts):\n    return operation()\n",
+    "tests": "calls = []\ndef flaky():\n    calls.append(1)\n    if len(calls) < 3: raise RuntimeError('transient')\n    return 42\nassert retry(flaky,3) == 42 and len(calls) == 3\ndef bad(): raise RuntimeError('still broken')\ntry: retry(bad,2)\nexcept RuntimeError: pass\nelse: raise AssertionError('Must propagate failure')\ntry: retry(lambda: 1,0)\nexcept ValueError: pass\nelse: raise AssertionError('Reject zero attempts')",
+    "solution": "def retry(operation, attempts):\n    if attempts < 1: raise ValueError('attempts must be positive')\n    for index in range(attempts):\n        try: return operation()\n        except RuntimeError:\n            if index == attempts - 1: raise\n"
+  },
+  {
+    "id": "M10",
+    "title": "The busiest endpoints",
+    "track": "algorithms",
+    "kind": "python",
+    "minutes": 25,
+    "difficulty": "Core",
+    "summary": "Rank incident hotspots with a deterministic tie break.",
+    "lesson": [
+      "A frequency map compresses repeated values into counts. Sorting all unique values costs O(u log u), where u is the number of unique endpoints.",
+      "A heap can improve top-k selection when k is small. Start with correctness: higher counts first, alphabetically smaller endpoint first for ties."
+    ],
+    "objective": "Return the top k endpoint names from top_endpoints(paths, k). Return [] when k <= 0.",
+    "hints": [
+      "Count paths before ranking.",
+      "Sort keys by (-count, endpoint).",
+      "Slice the sorted endpoints to k after checking k <= 0."
+    ],
+    "quiz": [
+      "What is u in O(n + u log u)?",
+      "The number of unique endpoints",
+      "The number of CPUs",
+      "The queue latency"
+    ],
+    "answer": 0,
+    "why": "Counting costs O(n); sorting the unique keys costs O(u log u).",
+    "version": 1,
+    "starter": "def top_endpoints(paths, k):\n    return []\n",
+    "tests": "assert top_endpoints([],3) == []\nassert top_endpoints(['/a','/b','/b','/a','/c'],2) == ['/a','/b']\nassert top_endpoints(['/a'],0) == []\nassert top_endpoints(['/z','/z','/a'],1) == ['/z']",
+    "solution": "from collections import Counter\ndef top_endpoints(paths, k):\n    if k <= 0: return []\n    counts = Counter(paths)\n    return sorted(counts, key=lambda x: (-counts[x],x))[:k]\n"
+  },
+  {
+    "id": "M11",
+    "title": "Catch the boundary bug",
+    "track": "python",
+    "kind": "python",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "Repair a small implementation by reasoning about edge cases.",
+    "lesson": [
+      "Boundary cases often expose faulty assumptions: empty input, one element, all equal values and values at a threshold.",
+      "Availability in this mission counts statuses below 500 as successful. The empty dataset has no observed availability, so return None. This is a teaching definition, not a universal SLI."
+    ],
+    "objective": "Repair availability(statuses). Return a fraction or None for no data.",
+    "hints": [
+      "The denominator must include every request.",
+      "A 500 response is a failure; a 499 response is not in this definition.",
+      "Use sum(s < 500 for s in statuses) / len(statuses)."
+    ],
+    "quiz": [
+      "What should no observations mean here?",
+      "100% availability",
+      "No observed value (None)",
+      "0% availability"
+    ],
+    "answer": 1,
+    "why": "No data should not silently become perfect or zero availability.",
+    "version": 1,
+    "starter": "def availability(statuses):\n    if not statuses: return 1.0\n    return sum(s <= 500 for s in statuses) / len(statuses)\n",
+    "tests": "assert availability([]) is None\nassert availability([499,500]) == 0.5\nassert availability([503]) == 0.0\nassert availability([200,201]) == 1.0",
+    "solution": "def availability(statuses):\n    if not statuses: return None\n    return sum(s < 500 for s in statuses) / len(statuses)\n"
+  },
+  {
+    "id": "M12",
+    "title": "The midnight backup",
+    "track": "shell",
+    "kind": "config",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "The backup works in your shell. It fails every night.",
+    "lesson": [
+      "Cron normally runs with a small environment, a different working directory and no interactive shell profile. Be explicit about executables and files.",
+      "A system crontab under /etc/cron.d has five schedule fields followed by a user and the command. A user crontab has no user field. Always capture diagnostics."
+    ],
+    "objective": "Repair the system crontab: run daily at 02:00 as backup, use /usr/bin/python3 and absolute script path, and append both output streams to /var/log/backup.log.",
+    "hints": [
+      "Keep the five schedule fields and the backup user.",
+      "Use the interpreter path returned by command -v python3.",
+      "Try: 0 2 * * * backup /usr/bin/python3 /opt/relay/backup.py >> /var/log/backup.log 2>&1"
+    ],
+    "quiz": [
+      "What differs in a system crontab?",
+      "It has no schedule",
+      "It includes a user field",
+      "It always loads your shell profile"
+    ],
+    "answer": 1,
+    "why": "/etc/cron.d entries include the execution user after the five schedule fields.",
+    "version": 1,
+    "path": "/etc/cron.d/relay-backup",
+    "starter": "0 2 * * * backup python backup.py\n",
+    "solution": "0 2 * * * backup /usr/bin/python3 /opt/relay/backup.py >> /var/log/backup.log 2>&1\n"
+  },
+  {
+    "id": "M13",
+    "title": "The overlapping job",
+    "track": "shell",
+    "kind": "config",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "The next job starts before the previous one finishes.",
+    "lesson": [
+      "A schedule controls start times, not concurrency. Long-running jobs may overlap unless the application or scheduler prevents it.",
+      "flock can acquire a file lock before executing a command. -n returns instead of waiting when another process holds the lock. A lock is not a replacement for idempotency after crashes."
+    ],
+    "objective": "Wrap the backup with /usr/bin/flock -n /tmp/relay-backup.lock, preserving absolute paths.",
+    "hints": [
+      "The lock should cover the entire backup command.",
+      "Use flock -n lock-file command.",
+      "Place /usr/bin/flock -n /tmp/relay-backup.lock before /usr/bin/python3."
+    ],
+    "quiz": [
+      "Why still design for idempotency?",
+      "Locks prevent every possible failure",
+      "Crashes and repeated deliveries still happen",
+      "It only matters in Java"
+    ],
+    "answer": 1,
+    "why": "A lock controls concurrent execution but cannot guarantee exactly-once effects across failures.",
+    "version": 1,
+    "path": "/etc/cron.d/relay-backup",
+    "starter": "0 2 * * * backup /usr/bin/python3 /opt/relay/backup.py\n",
+    "solution": "0 2 * * * backup /usr/bin/flock -n /tmp/relay-backup.lock /usr/bin/python3 /opt/relay/backup.py\n"
+  },
+  {
+    "id": "M14",
+    "title": "The release gate",
+    "track": "delivery",
+    "kind": "python",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "Do not deploy when a required check is missing or failed.",
+    "lesson": [
+      "A release gate should fail closed: absence of evidence is not success. Use a fixed set of required checks.",
+      "This function models the gate shared by a CI pipeline and a local release tool. It is not a GitHub Actions emulator."
+    ],
+    "objective": "Implement can_deploy(checks). Required checks are tests, build and smoke, each exactly True.",
+    "hints": [
+      "Iterate over the required names.",
+      "Missing keys must count as failure.",
+      "Use all(checks.get(name) is True for name in required)."
+    ],
+    "quiz": [
+      "If a required check never ran, deployment should\u2026",
+      "Proceed optimistically",
+      "Stop until evidence is available",
+      "Skip all other checks"
+    ],
+    "answer": 1,
+    "why": "A fail-closed gate requires positive evidence for every required check.",
+    "version": 1,
+    "starter": "def can_deploy(checks):\n    return True\n",
+    "tests": "assert can_deploy({'tests':True,'build':True,'smoke':True}) is True\nassert can_deploy({'tests':True,'build':True}) is False\nassert can_deploy({'tests':True,'build':False,'smoke':True}) is False\nassert can_deploy({'tests':1,'build':True,'smoke':True}) is False",
+    "solution": "def can_deploy(checks):\n    return all(checks.get(name) is True for name in ('tests','build','smoke'))\n"
+  },
+  {
+    "id": "M15",
+    "title": "A reliable handoff",
+    "track": "reliability",
+    "kind": "python",
+    "minutes": 30,
+    "difficulty": "Core",
+    "summary": "Deduplicate incident events before handing them to the next team.",
+    "lesson": [
+      "At-least-once delivery can send the same event more than once. Idempotent processing avoids repeating side effects.",
+      "Preserve the first occurrence of each event ID, maintaining original order. A process-local set is enough for this exercise; production deduplication needs durable state and a retention policy."
+    ],
+    "objective": "Implement deduplicate(events), preserving the first event with each id and the order.",
+    "hints": [
+      "Keep a set of IDs already seen.",
+      "Append only the first event for each ID.",
+      "Update the set when you append."
+    ],
+    "quiz": [
+      "What changes for production deduplication?",
+      "Nothing, RAM is always durable",
+      "State durability and retention must be designed",
+      "Duplicates are impossible"
+    ],
+    "answer": 1,
+    "why": "A restart loses an in-memory set, and unbounded retention eventually exhausts storage.",
+    "version": 1,
+    "starter": "def deduplicate(events):\n    return events\n",
+    "tests": "assert deduplicate([]) == []\nassert deduplicate([{'id':'a','value':1},{'id':'a','value':2},{'id':'b','value':3}]) == [{'id':'a','value':1},{'id':'b','value':3}]\nassert deduplicate([{'id':'b'},{'id':'a'},{'id':'b'}]) == [{'id':'b'},{'id':'a'}]",
+    "solution": "def deduplicate(events):\n    seen = set()\n    result = []\n    for event in events:\n        if event['id'] not in seen:\n            seen.add(event['id'])\n            result.append(event)\n    return result\n"
+  }
+]
