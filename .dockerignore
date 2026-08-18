@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.env
+.env.*
+public/pyodide
+test-results
+playwright-report
+**/__pycache__
+.bootstrap

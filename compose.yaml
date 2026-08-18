@@ -1,0 +1,53 @@
+name: platform-forge
+services:
+  web:
+    build: { context: ., target: web }
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      api: { condition: service_healthy }
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+  api:
+    build: { context: ., target: api }
+    environment:
+      API_TOKEN: ${API_TOKEN:-}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      RUNNER_URL: ${RUNNER_URL:-}
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    healthcheck:
+      test:
+        [
+          CMD,
+          python,
+          -c,
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/api/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+  runner:
+    profiles: [labs]
+    build: { context: ., target: runner }
+    environment:
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+      LAB_IMAGE: ${LAB_IMAGE:-python:3.13-alpine}
+    volumes:
+      - ${LAB_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
