@@ -35,12 +35,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.build_type' > /tmp/forge-pages-source 2>/dev/null && grep -q 'workflow' /tmp/forge-pages-source; then
-            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          if gh api "repos/$GITHUB_REPOSITORY/pages" > /tmp/forge-pages-config.json; then
+            python3 -c 'import json; p=json.load(open("/tmp/forge-pages-config.json")); print("Pages configuration:", json.dumps({k:p.get(k) for k in ("build_type", "status", "html_url", "source")}))'
+            source_type=$(python3 -c 'import json; print(json.load(open("/tmp/forge-pages-config.json")).get("build_type", "unknown"))')
+            if [ "$source_type" = "workflow" ]; then
+              echo 'enabled=true' >> "$GITHUB_OUTPUT"
+            else
+              echo 'enabled=false' >> "$GITHUB_OUTPUT"
+              echo "::warning::Pages source is '$source_type'. Select GitHub Actions in Settings → Pages."
+              echo "Standalone build passed. Pages source is '$source_type'; choose GitHub Actions in Settings → Pages." >> "$GITHUB_STEP_SUMMARY"
+            fi
           else
             echo 'enabled=false' >> "$GITHUB_OUTPUT"
-            echo 'Standalone artifact built. In Settings → Pages, set Source to GitHub Actions, then run this workflow again.' >> "$GITHUB_STEP_SUMMARY"
-            echo '::warning::Pages needs initial setup: Settings → Pages → Source: GitHub Actions.'
+            echo '::warning::Could not read Pages configuration. See the API error above; verify Pages setup and workflow permissions.'
+            echo 'Standalone build passed, but Pages configuration could not be read. See the API error in Check initial Pages setup.' >> "$GITHUB_STEP_SUMMARY"
           fi
   deploy:
     if: needs.build.outputs.enabled == 'true'
