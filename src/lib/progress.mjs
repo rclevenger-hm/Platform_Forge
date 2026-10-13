@@ -1,9 +1,11 @@
+import { cleanRun } from "./jobs.mjs";
 import { cleanGraph, cleanDesignConfig } from "./architecture.mjs";
 import { cleanJournal } from "./journal.mjs";
 import { CONCEPTS } from "./curriculum.mjs";
 export const KEY = "platform-forge:v1";
 export const fresh = () => ({
-  version: 3,
+  version: 4,
+  labRuns: [],
   attempts: [],
   notes: {},
   drafts: {},
@@ -17,12 +19,13 @@ export const fresh = () => ({
 export function validateProgress(v) {
   if (
     !v ||
-    ![1, 2, 3].includes(v.version) ||
+    ![1, 2, 3, 4].includes(v.version) ||
     !Array.isArray(v.attempts) ||
     v.attempts.length > 10000
   )
     throw Error("Not a supported Platform Forge progress file.");
   const clean = fresh();
+  clean.labRuns = Array.isArray(v.labRuns) ? [...new Map(v.labRuns.slice(-100).map(x => cleanRun(x, true)).filter(Boolean).map(x => [x.id,x])).values()] : [];
   clean.attempts = v.attempts.map((a) => {
     if (
       !a ||

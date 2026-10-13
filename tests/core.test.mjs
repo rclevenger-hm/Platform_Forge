@@ -64,7 +64,7 @@ test("simulated shell cannot delete protected audit evidence or execute arbitrar
   assert.match(command(s, "curl bad.example").output, /not supported/);
 });
 test("progress import rejects invalid results and prototype keys", () => {
-  assert.throws(() => validateProgress({ version: 4, attempts: [] }));
+  assert.throws(() => validateProgress({ version: 99, attempts: [] }));
   assert.throws(() =>
     validateProgress({ version: 1, attempts: [{ passed: "true" }] }),
   );

@@ -25,8 +25,11 @@ export async function request(settings, path, body, signal) {
   else signal?.addEventListener("abort", abort, { once: true });
   try {
     const r = await fetch(`${settings.url || ""}/api/${path}`, {
+      credentials: "include",
       method: body ? "POST" : "GET",
       headers: {
+        "X-Forge-Client": "1",
+        ...(settings.csrf ? { "X-CSRF-Token": settings.csrf } : {}),
         ...(body ? { "Content-Type": "application/json" } : {}),
         ...(settings.token
           ? { Authorization: `Bearer ${settings.token}` }
@@ -40,7 +43,9 @@ export async function request(settings, path, body, signal) {
       try {
         message = (await r.json()).error || message;
       } catch {}
-      throw Error(message);
+      const error = Error(message);
+      error.status = r.status;
+      throw error;
     }
     return await r.json();
   } catch (e) {

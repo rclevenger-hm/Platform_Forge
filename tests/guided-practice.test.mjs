@@ -42,7 +42,7 @@ test('guided incident evidence survives migration and export without falsely ver
   assert.match(journalMarkdown(missions,clean),/Configuration is stale/);
   assert.equal(stageEvidence({...m,version:2},clean.incidents.M01,[],null)[0].done,false);
   const old=validateProgress({version:2,attempts:[],notes:{M01:'Keep'},drafts:{},designs:[]});
-  assert.equal(old.version,3);assert.equal(old.notes.M01,'Keep');
+  assert.equal(old.version,4);assert.equal(old.notes.M01,'Keep');
 });
 test('imports bound structured fields and discard invalid plans', () => {
   const p=fresh();p.incidents.M01={version:1,observation:'x'.repeat(7000)};

@@ -29,7 +29,7 @@ test('data-driven checks support a new mission ID without changing the grader', 
 test('v1 backups migrate losslessly and v2 preserves versioned evidence and author drafts', () => {
   const old = {version: 1, attempts: [{id: 'legacy', missionId: 'M07', at: '2026-01-01T00:00:00Z', mode: 'browser Python', passed: true, hints: 0}], notes: {M07:'Preserve me'}, drafts: {M07:'code'}, designs: [{name:'test', rationale:'why', config:null}]};
   const p = validateProgress(old);
-  assert.equal(p.version, 3); assert.equal(p.attempts[0].missionVersion, 1);
+  assert.equal(p.version, 4); assert.equal(p.attempts[0].missionVersion, 1);
   assert.equal(p.notes.M07, 'Preserve me'); assert.equal(p.drafts.M07, 'code');
   assert.equal(conceptReviews(p, missions)[0].concept, 'aggregation');
   p.authorDraft = '{"id":"NEW"}';
