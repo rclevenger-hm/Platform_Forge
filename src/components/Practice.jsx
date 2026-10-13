@@ -18,6 +18,8 @@ import { request } from "../lib/api.mjs";
 import IncidentNotebook from "./IncidentNotebook";
 import WorkspaceTabs from "./WorkspaceTabs";
 import { stageEvidence } from "../lib/journal.mjs";
+import { startManagedRun } from "../lib/jobs.mjs";
+import RunRecord from "./RunRecord";
 import Tutor from "./Tutor";
 export default function Practice({
   mission: m,
@@ -42,12 +44,15 @@ export default function Practice({
     [output, setOutput] = useState(""),
     [busy, setBusy] = useState(false),
     [result, setResult] = useState(null),
+    [run, setRun] = useState(null),
+    [cancelError, setCancelError] = useState(""),
     [engine, setEngine] = useState("browser"),
     [workspaceTab, setWorkspaceTab] = useState("Workspace"),
     [selectedFile, setSelectedFile] = useState("");
   const language = m.runtime || m.kind;
   const dockerReady = capabilities.runner && (capabilities.runnerLanguages || ["python"]).includes(language);
   const stages = stageEvidence(m, progress.incidents?.[m.id], progress.attempts, progress.notes[m.id]);
+  const managed = useRef(null);
   const worker = useRef(null),
     mounted = useRef(true);
   useEffect(() => {
@@ -55,6 +60,7 @@ export default function Practice({
     return () => {
       mounted.current = false;
       worker.current?.terminate();
+      managed.current?.cancel().catch(() => {});
     };
   }, []);
   function edit(value) {
@@ -75,7 +81,10 @@ export default function Practice({
     setResult(null);
   }
   async function check() {
+    if (busy) return;
     setBusy(true);
+    setRun(null);
+    setCancelError("");
     setResult(null);
     setChecks([]);
     setOutput("");
@@ -84,7 +93,15 @@ export default function Practice({
       mode = m.kind === "python" ? "browser Python" : "browser simulation";
     try {
       if (engine === "docker" && dockerReady) {
-        const r = await request(settings, "run", { missionId: m.id, code });
+        let r;
+        if (capabilities.runnerJobs) {
+          managed.current = startManagedRun(settings,m,code,record=>{if (mounted.current) setRun(record);});
+          r = await managed.current.done;
+          managed.current = null;
+          if (!mounted.current) return;
+          setProgress(p=>({...p,labRuns:[...(p.labRuns || []).filter(x=>x.id!==r.id),r].slice(-100)}));
+          if (!["succeeded","failed"].includes(r.state)) { setOutput(r.output || "Run stopped without a submitted practice result."); return; }
+        } else r = await request(settings, "run", { missionId: m.id, code });
         list = [[`${language === "bash" ? "Bash" : "Python"} behavior checks`, r.passed]];
         out = r.output; mode = "Docker lab";
       } else if (m.kind === "terminal") list = terminalChecks(m, state);
@@ -113,6 +130,7 @@ export default function Practice({
         setResult(false);
       }
     } finally {
+      managed.current = null;
       if (mounted.current) setBusy(false);
     }
   }
@@ -206,6 +224,7 @@ export default function Practice({
                 <select
                   aria-label="Execution engine"
                   value={engine}
+                  disabled={busy}
                   onChange={(e) => setEngine(e.target.value)}
                 >
                   <option value="browser">{m.kind === "python" ? "Browser Python" : "Browser template checks"}</option>
@@ -251,6 +270,7 @@ export default function Practice({
                 className="code-editor"
                 aria-label="Code editor"
                 spellCheck="false"
+                readOnly={busy}
                 value={code}
                 onChange={(e) => edit(e.target.value)}
                 maxLength={24000}
@@ -273,6 +293,9 @@ export default function Practice({
               <h3>Submitted attempts</h3>
               {progress.attempts.filter(a => a.missionId === m.id).slice(-10).reverse().map(a => <p key={a.id}>{a.passed ? "Passed" : "Needs another attempt"} · v{a.missionVersion ?? 1} · {a.mode} · {new Date(a.at).toLocaleString()}</p>)}
               {!progress.attempts.some(a => a.missionId === m.id) && <p>No submitted attempts yet.</p>}
+              <h3>Managed Docker runs</h3>
+              {(progress.labRuns || []).filter(r=>r.missionId===m.id).slice(-10).reverse().map(r=><RunRecord key={r.id} run={r}/>)}
+              {!(progress.labRuns || []).some(r=>r.missionId===m.id) && <p>No managed runs recorded for this mission.</p>}
               {m.kind === "terminal" && <><h3>Current simulation transcript</h3><pre>{log.join("\n")}</pre></>}
             </div>
             <div className="workspace-footer">
@@ -293,6 +316,7 @@ export default function Practice({
                   type="radio"
                   name="concept"
                   checked={quiz === i}
+                  disabled={busy}
                   onChange={() => {
                     setQuiz(i);
                     setResult(null);
@@ -309,7 +333,13 @@ export default function Practice({
               <Play size={16} />
               {busy ? "Running checks…" : "Run checks & submit"}
             </button>
-            {busy && m.kind === "python" && (
+            {busy && engine === "docker" && capabilities.runnerJobs && <div className="managed-run" role="status">
+              <p>{run?.state === "cancelling" ? "Waiting for container cleanup…" : "Running in a disposable container. You can stop this run."}</p>
+              <button disabled={run?.state === "cancelling"} onClick={async()=>{try {const record=await managed.current?.cancel(); if(record) setRun(record);} catch(error) {setCancelError(error.message);}}}>Cancel run</button>
+              {cancelError && <p className="warning">{cancelError}</p>}
+            </div>}
+            {run && <RunRecord run={run}/>}
+            {busy && engine !== "docker" && m.kind === "python" && (
               <p className="muted" role="status">
                 The first Python run loads the bundled runtime. Runs stop after
                 60 seconds.
@@ -357,7 +387,7 @@ export default function Practice({
               placeholder="What happened? What did you change? How did you verify it?"
             />
             <small>
-              Saved in this browser. Export your portfolio to keep a backup.
+              Saved on this device and synced when signed in. Export your portfolio to keep a backup.
             </small>
           </section>
         </div>

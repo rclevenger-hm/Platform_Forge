@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plug, Zap, ShieldCheck } from "lucide-react";
 import { normalizeUrl, request } from "../lib/api.mjs";
 export default function Settings({
+  account,
   settings,
   setSettings,
   capabilities,
@@ -15,11 +16,18 @@ export default function Settings({
     e.preventDefault();
     setBusy(true);
     try {
-      const next = { url: normalizeUrl(url), token };
-      const result = await request(next, "capabilities");
+      const next = { ...settings, url: normalizeUrl(url), token };
+      const auth = await request(next, "auth/status").catch(() => null);
+      let result;
+      try { result = await request(next, "capabilities"); }
+      catch (error) {
+        if (!auth?.available) throw error;
+        result = {connected:true,tutor:false,runner:false};
+      }
+      account.refreshAvailability(auth || {available:false});
       setSettings(next);
       setCapabilities(result);
-      setMessage("Backend connected. Available features are shown below.");
+      setMessage("Backend connected. Sign in from Account to save your progress.");
     } catch (e) {
       setCapabilities({ tutor: false, runner: false, connected: false });
       setMessage(e.message);
@@ -33,7 +41,7 @@ export default function Settings({
       <h1>Choose how you learn.</h1>
       <p className="lede">
         The campaign needs no account, API key, or model. Add a backend when you
-        want AI coaching or isolated Docker Python and Bash.
+        want saved accounts, AI coaching or isolated Docker Python and Bash.
       </p>
       <div className="settings-grid">
         <section className="panel">
@@ -41,9 +49,11 @@ export default function Settings({
             <Plug size={22} /> Connect a backend
           </h2>
           <form onSubmit={connect}>
+            <fieldset>
             <label>
               Platform Forge backend URL
               <input
+                disabled={!!account.session}
                 type="url"
                 placeholder="http://localhost:8787 (blank = this site)"
                 value={url}
@@ -53,11 +63,12 @@ export default function Settings({
             <label>
               Backend access token
               <input
+                disabled={!!account.session}
                 type="password"
                 autoComplete="off"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder="Optional for loopback development"
+                placeholder="Operator token; individuals can sign in from Account"
               />
             </label>
             <p className="muted">
@@ -71,6 +82,7 @@ export default function Settings({
             </button>
             <button
               type="button"
+              disabled={!!account.session}
               onClick={() => {
                 setSettings({ url: "", token: "" });
                 setCapabilities({
@@ -87,6 +99,8 @@ export default function Settings({
             >
               Disconnect
             </button>
+            </fieldset>
+            {account.session && <p>Sign out from Account before changing backends.</p>}
           </form>
           {message && (
             <p className="connection-message" role="status">
@@ -100,7 +114,9 @@ export default function Settings({
             ["Campaign, authored hints & notes", true],
             ["Python in the browser", true],
             ["Design Lab & interview practice", true],
+            ["Account login & progress sync", account.availability?.available],
             ["Contextual AI mentor", capabilities.tutor],
+            ["Managed runs & cancellation", capabilities.runnerJobs],
             ["Isolated Docker Python", capabilities.runner && (capabilities.runnerLanguages || ["python"]).includes("python")],
             ["Isolated Docker Bash", capabilities.runner && capabilities.runnerLanguages?.includes("bash")],
           ].map(([label, active]) => (

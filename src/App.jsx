@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   House,
+  UserRound,
   Repeat2,
   FileCode2,
   Map,
@@ -15,7 +16,9 @@ import {
 } from "lucide-react";
 import missions from "./data/missions.json";
 import tracks from "./data/tracks.json";
-import { KEY, fresh, readProgress } from "./lib/progress.mjs";
+import useLearningAccount from "./lib/useLearningAccount";
+import { BACKEND_KEY } from "./lib/account.mjs";
+import Account from "./components/Account";
 import { request } from "./lib/api.mjs";
 import Home from "./components/Home";
 import Campaign from "./components/Campaign";
@@ -36,6 +39,7 @@ const nav = [
   ["Portfolio", NotebookPen],
   ["Author", FileCode2],
   ["Settings", SettingsIcon],
+  ["Account", UserRound],
 ];
 function route() {
   try {
@@ -52,15 +56,10 @@ export default function App() {
   const [page, setPage] = useState(route),
     [missionId, setMissionId] = useState(routedMission),
     [mobile, setMobile] = useState(false),
-    [progress, setProgress] = useState(() => {
-      try {
-        return readProgress(localStorage);
-      } catch {
-        return fresh();
-      }
+    [settings, setSettings] = useState(() => {
+      try { return { url: localStorage.getItem(BACKEND_KEY) || "", token: "", csrf: "" }; }
+      catch { return {url:"",token:"",csrf:""}; }
     }),
-    [storageError, setStorageError] = useState(""),
-    [settings, setSettings] = useState({ url: "", token: "" }),
     [capabilities, setCapabilities] = useState({
       tutor: false,
       runner: false,
@@ -71,23 +70,13 @@ export default function App() {
     addEventListener("hashchange", onHash);
     return () => removeEventListener("hashchange", onHash);
   }, []);
+  const {progress,setProgress,storageError,account} = useLearningAccount(settings,setSettings,setCapabilities);
   useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(progress));
-      setStorageError("");
-    } catch {
-      setStorageError(
-        "Browser storage is unavailable or full. Export your progress before closing this tab.",
-      );
-    }
-  }, [progress]);
-  useEffect(() => {
+    try { localStorage.setItem(BACKEND_KEY,settings.url); } catch {}
     const c = new AbortController();
-    request({ url: "", token: "" }, "capabilities", undefined, c.signal)
-      .then(setCapabilities)
-      .catch(() => {});
+    request(settings, "capabilities", undefined, c.signal).then(setCapabilities).catch(() => {});
     return () => c.abort();
-  }, []);
+  }, [settings.url]);
   function navigate(name, id = missionId) {
     setPage(name);
     location.hash = encodeURIComponent(name === "Practice" ? `Practice/${id}` : name);
@@ -100,6 +89,7 @@ export default function App() {
     navigate("Practice", id);
   }
   const common = {
+    account,
     missions,
     tracks,
     progress,
@@ -171,7 +161,7 @@ export default function App() {
           >
             Open source <ExternalLink size={13} />
           </a>
-          <small>v0.2.1 · Guided practice</small>
+          <small>v0.2.2 · Accounts & managed runs</small>
         </div>
       </aside>
       <div className="main-shell">
@@ -180,6 +170,8 @@ export default function App() {
             Workspace <span className="separator">/</span>{" "}
             <strong>{page}</strong>
           </span>
+          <div className="topbar-actions">
+          <button className="account-pill" onClick={()=>navigate("Account")}><UserRound size={16}/>{account.session ? account.session.user.username : "Sign in"}</button>
           <button
             className="connection-pill"
             onClick={() => navigate("Settings")}
@@ -189,8 +181,10 @@ export default function App() {
               ? "AI mentor connected"
               : "AI optional · standalone mode"}
           </button>
+          </div>
         </header>
-        <main id="main-content" tabIndex={-1}>
+        <main id="main-content" tabIndex={-1} key={account.session?.user.id || "guest"}>
+          {account.session && ["conflict","error"].includes(account.session.status) && <div className="warning" role="alert">Account sync needs attention. Your device copy is preserved. <button onClick={()=>navigate("Account")}>Review account sync</button></div>}
           {storageError && (
             <div className="warning" role="alert">
               {storageError}
@@ -211,6 +205,7 @@ export default function App() {
           {page === "Review" && <Review {...common} />}
           {page === "Author" && <Author {...common} />}
           {page === "Settings" && <Settings {...common} />}
+          {page === "Account" && <Account {...common} />}
         </main>
         <footer>
           Small experiments. Clear evidence. Better engineering.

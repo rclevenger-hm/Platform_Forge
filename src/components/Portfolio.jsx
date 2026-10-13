@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Download, Upload, FileCheck2 } from "lucide-react";
+import RunRecord from "./RunRecord";
 import { JOURNAL_FIELDS, journalMarkdown } from "../lib/journal.mjs";
 import { validateProgress, status } from "../lib/progress.mjs";
 export default function Portfolio({
@@ -130,6 +131,8 @@ export default function Portfolio({
       ) : (
         <p className="muted">Saved Design Lab experiments will appear here.</p>
       )}
+      <h2>Managed Docker runs</h2>
+      {(progress.labRuns || []).length ? progress.labRuns.slice(-10).reverse().map(r=><section className="panel" key={r.id}><RunRecord run={r}/></section>) : <p className="muted">Completed and cancelled managed runs appear here when connected to a compatible backend.</p>}
       <h2>Recent attempts</h2>
       <div className="table-wrap">
         <table>
@@ -159,7 +162,7 @@ export default function Portfolio({
         </table>
       </div>
       <p className="footnote">
-        Records are self-reported practice evidence stored on this device.
+        Records are self-reported practice evidence stored on this device and synced when signed in.
         Browser checks are visible and editable; this is not a proctored
         assessment.
       </p>
