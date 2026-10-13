@@ -8,12 +8,12 @@ self.onmessage = async ({ data }) => {
     let output = "";
     runtime.setStdout({
       batched: (s) => {
-        if (output.length < 12000) output += s + "\n";
+        if (output.length < 12000) output += (s + "\n").slice(0, 12000 - output.length);
       },
     });
     runtime.setStderr({
       batched: (s) => {
-        if (output.length < 12000) output += s + "\n";
+        if (output.length < 12000) output += (s + "\n").slice(0, 12000 - output.length);
       },
     });
     const globals = runtime.toPy({});
