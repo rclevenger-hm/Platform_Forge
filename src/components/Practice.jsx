@@ -71,8 +71,8 @@ export default function Practice({
       out = "",
       mode = m.kind === "python" ? "browser Python" : "browser simulation";
     try {
-      if (m.kind === "terminal") list = terminalChecks(m.id, state);
-      else if (m.kind === "config") list = configChecks(m.id, code);
+      if (m.kind === "terminal") list = terminalChecks(m, state);
+      else if (m.kind === "config") list = configChecks(m, code);
       else {
         const r =
           engine === "docker" && capabilities.runner

@@ -1,17 +1,18 @@
 {
   "name": "platform-forge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "pretest": "npm run prepare:python",
+    "pretest": "npm run validate:curriculum && npm run prepare:python",
     "dev": "vite --host 127.0.0.1",
     "prepare:python": "node scripts/vendor-python.mjs",
-    "build": "npm run prepare:python && vite build",
+    "build": "npm run validate:curriculum && npm run prepare:python && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/*.test.mjs",
     "test:e2e": "playwright test",
-    "test:server": "python3 -m unittest discover -s server -p 'test_*.py'"
+    "test:server": "python3 -m unittest discover -s server -p 'test_*.py'",
+    "validate:curriculum": "node scripts/validate-curriculum.mjs"
   },
   "dependencies": {
     "react": "19.3.0",

@@ -26,7 +26,28 @@
     "answer": 0,
     "why": "An absolute path starts from the root directory, regardless of the current directory.",
     "version": 1,
-    "commands": ["pwd", "ls", "cat handoff.txt", "cat /var/log/relay.log"]
+    "commands": [
+      "pwd",
+      "ls",
+      "cat handoff.txt",
+      "cat /var/log/relay.log"
+    ],
+    "concepts": [
+      "evidence"
+    ],
+    "prerequisites": [],
+    "checks": [
+      {
+        "label": "Read the handoff",
+        "type": "read",
+        "value": "/home/learner/handoff.txt"
+      },
+      {
+        "label": "Inspect the service log",
+        "type": "read",
+        "value": "/var/log/relay.log"
+      }
+    ]
   },
   {
     "id": "M02",
@@ -55,7 +76,25 @@
     "answer": 1,
     "why": "600 gives the owner read/write and gives group/other no permissions.",
     "version": 1,
-    "commands": ["ls -l", "chmod 600 secret.env", "ls -l"]
+    "commands": [
+      "ls -l",
+      "chmod 600 secret.env",
+      "ls -l"
+    ],
+    "concepts": [
+      "permissions"
+    ],
+    "prerequisites": [
+      "M01"
+    ],
+    "checks": [
+      {
+        "label": "Owner read/write only",
+        "type": "state",
+        "value": "600",
+        "key": "mode"
+      }
+    ]
   },
   {
     "id": "M03",
@@ -88,6 +127,25 @@
       "cat /var/log/relay.log",
       "service relay status",
       "service relay restart"
+    ],
+    "concepts": [
+      "recovery"
+    ],
+    "prerequisites": [
+      "M01"
+    ],
+    "checks": [
+      {
+        "label": "Read failure evidence",
+        "type": "read",
+        "value": "/var/log/relay.log"
+      },
+      {
+        "label": "Service running",
+        "type": "state",
+        "value": true,
+        "key": "running"
+      }
     ]
   },
   {
@@ -117,7 +175,36 @@
     "answer": 0,
     "why": "Space recovery should preserve evidence and respect retention requirements.",
     "version": 1,
-    "commands": ["df -h", "du -h /var/log", "truncate -s 0 /var/log/debug.log"]
+    "commands": [
+      "df -h",
+      "du -h /var/log",
+      "truncate -s 0 /var/log/debug.log"
+    ],
+    "concepts": [
+      "storage"
+    ],
+    "prerequisites": [
+      "M01"
+    ],
+    "checks": [
+      {
+        "label": "Inspect disk usage",
+        "type": "state",
+        "value": true,
+        "key": "inspectedDisk"
+      },
+      {
+        "label": "Clear debug log",
+        "type": "state",
+        "value": true,
+        "key": "cleared"
+      },
+      {
+        "label": "Preserve audit log",
+        "type": "filePresent",
+        "value": "/var/log/audit.log"
+      }
+    ]
   },
   {
     "id": "M05",
@@ -148,7 +235,38 @@
     "version": 1,
     "path": "/home/learner/pipeline.sh",
     "starter": "#!/bin/bash\n# Keep the producer and consumer below.\nfalse | cat\n",
-    "solution": "#!/bin/bash\nset -o pipefail\nfalse | cat\n"
+    "solution": "#!/bin/bash\nset -o pipefail\nfalse | cat\n",
+    "concepts": [
+      "pipelines"
+    ],
+    "prerequisites": [
+      "M03"
+    ],
+    "checks": [
+      {
+        "label": "Enable pipeline error propagation",
+        "type": "oneOfLines",
+        "value": [
+          "set -o pipefail",
+          "set -euo pipefail"
+        ]
+      },
+      {
+        "label": "Keep the diagnostic pipeline",
+        "type": "line",
+        "value": "false | cat"
+      }
+    ],
+    "runtime": "bash",
+    "cases": [
+      {
+        "label": "Pipeline reports failure",
+        "args": [],
+        "stdin": "",
+        "stdout": "",
+        "exit": 1
+      }
+    ]
   },
   {
     "id": "M06",
@@ -179,7 +297,35 @@
     "version": 1,
     "path": "/home/learner/quote.sh",
     "starter": "#!/bin/bash\nfile=\"incident report.txt\"\nprintf \"%s\\n\" $file\n",
-    "solution": "#!/bin/bash\nfile=\"incident report.txt\"\nprintf \"%s\\n\" \"$file\"\n"
+    "solution": "#!/bin/bash\nfile=\"incident report.txt\"\nprintf \"%s\\n\" \"$file\"\n",
+    "concepts": [
+      "quoting"
+    ],
+    "prerequisites": [
+      "M05"
+    ],
+    "checks": [
+      {
+        "label": "Preserve the filename variable",
+        "type": "line",
+        "value": "file=\"incident report.txt\""
+      },
+      {
+        "label": "Pass one quoted argument",
+        "type": "line",
+        "value": "printf \"%s\\n\" \"$file\""
+      }
+    ],
+    "runtime": "bash",
+    "cases": [
+      {
+        "label": "Filename remains one line",
+        "args": [],
+        "stdin": "",
+        "stdout": "incident report.txt\n",
+        "exit": 0
+      }
+    ]
   },
   {
     "id": "M07",
@@ -210,7 +356,13 @@
     "version": 1,
     "starter": "def error_counts(records):\n    # Each record has client and status keys.\n    return {}\n",
     "tests": "assert error_counts([]) == {}\nassert error_counts([{'client':'a','status':503},{'client':'b','status':200},{'client':'a','status':500}]) == {'a':2}\nassert error_counts([{'client':'b','status':501},{'client':'c','status':404}]) == {'b':1}",
-    "solution": "def error_counts(records):\n    counts = {}\n    for r in records:\n        if r['status'] >= 500:\n            counts[r['client']] = counts.get(r['client'], 0) + 1\n    return counts\n"
+    "solution": "def error_counts(records):\n    counts = {}\n    for r in records:\n        if r['status'] >= 500:\n            counts[r['client']] = counts.get(r['client'], 0) + 1\n    return counts\n",
+    "concepts": [
+      "aggregation"
+    ],
+    "prerequisites": [
+      "M01"
+    ]
   },
   {
     "id": "M08",
@@ -241,7 +393,13 @@
     "version": 1,
     "starter": "def summarize(statuses):\n    return {\"total\": 0, \"errors\": 0, \"error_rate\": 0.0}\n",
     "tests": "assert summarize([]) == {'total':0,'errors':0,'error_rate':0.0}\nassert summarize([200,500,503,404]) == {'total':4,'errors':2,'error_rate':0.5}\nassert summarize([200])['errors'] == 0",
-    "solution": "def summarize(statuses):\n    total = len(statuses)\n    errors = sum(s >= 500 for s in statuses)\n    return {'total':total, 'errors':errors, 'error_rate':errors / total if total else 0.0}\n"
+    "solution": "def summarize(statuses):\n    total = len(statuses)\n    errors = sum(s >= 500 for s in statuses)\n    return {'total':total, 'errors':errors, 'error_rate':errors / total if total else 0.0}\n",
+    "concepts": [
+      "boundaries"
+    ],
+    "prerequisites": [
+      "M07"
+    ]
   },
   {
     "id": "M09",
@@ -272,7 +430,13 @@
     "version": 1,
     "starter": "def retry(operation, attempts):\n    return operation()\n",
     "tests": "calls = []\ndef flaky():\n    calls.append(1)\n    if len(calls) < 3: raise RuntimeError('transient')\n    return 42\nassert retry(flaky,3) == 42 and len(calls) == 3\ndef bad(): raise RuntimeError('still broken')\ntry: retry(bad,2)\nexcept RuntimeError: pass\nelse: raise AssertionError('Must propagate failure')\ntry: retry(lambda: 1,0)\nexcept ValueError: pass\nelse: raise AssertionError('Reject zero attempts')",
-    "solution": "def retry(operation, attempts):\n    if attempts < 1: raise ValueError('attempts must be positive')\n    for index in range(attempts):\n        try: return operation()\n        except RuntimeError:\n            if index == attempts - 1: raise\n"
+    "solution": "def retry(operation, attempts):\n    if attempts < 1: raise ValueError('attempts must be positive')\n    for index in range(attempts):\n        try: return operation()\n        except RuntimeError:\n            if index == attempts - 1: raise\n",
+    "concepts": [
+      "retries"
+    ],
+    "prerequisites": [
+      "M08"
+    ]
   },
   {
     "id": "M10",
@@ -303,7 +467,13 @@
     "version": 1,
     "starter": "def top_endpoints(paths, k):\n    return []\n",
     "tests": "assert top_endpoints([],3) == []\nassert top_endpoints(['/a','/b','/b','/a','/c'],2) == ['/a','/b']\nassert top_endpoints(['/a'],0) == []\nassert top_endpoints(['/z','/z','/a'],1) == ['/z']",
-    "solution": "from collections import Counter\ndef top_endpoints(paths, k):\n    if k <= 0: return []\n    counts = Counter(paths)\n    return sorted(counts, key=lambda x: (-counts[x],x))[:k]\n"
+    "solution": "from collections import Counter\ndef top_endpoints(paths, k):\n    if k <= 0: return []\n    counts = Counter(paths)\n    return sorted(counts, key=lambda x: (-counts[x],x))[:k]\n",
+    "concepts": [
+      "ordering"
+    ],
+    "prerequisites": [
+      "M07"
+    ]
   },
   {
     "id": "M11",
@@ -334,7 +504,13 @@
     "version": 1,
     "starter": "def availability(statuses):\n    if not statuses: return 1.0\n    return sum(s <= 500 for s in statuses) / len(statuses)\n",
     "tests": "assert availability([]) is None\nassert availability([499,500]) == 0.5\nassert availability([503]) == 0.0\nassert availability([200,201]) == 1.0",
-    "solution": "def availability(statuses):\n    if not statuses: return None\n    return sum(s < 500 for s in statuses) / len(statuses)\n"
+    "solution": "def availability(statuses):\n    if not statuses: return None\n    return sum(s < 500 for s in statuses) / len(statuses)\n",
+    "concepts": [
+      "boundaries"
+    ],
+    "prerequisites": [
+      "M08"
+    ]
   },
   {
     "id": "M12",
@@ -365,7 +541,25 @@
     "version": 1,
     "path": "/etc/cron.d/relay-backup",
     "starter": "0 2 * * * backup python backup.py\n",
-    "solution": "0 2 * * * backup /usr/bin/python3 /opt/relay/backup.py >> /var/log/backup.log 2>&1\n"
+    "solution": "0 2 * * * backup /usr/bin/python3 /opt/relay/backup.py >> /var/log/backup.log 2>&1\n",
+    "concepts": [
+      "scheduling"
+    ],
+    "prerequisites": [
+      "M06"
+    ],
+    "checks": [
+      {
+        "label": "One active system crontab entry",
+        "type": "lineCount",
+        "value": 1
+      },
+      {
+        "label": "Match schedule, user and explicit command",
+        "type": "normalizedLine",
+        "value": "0 2 * * * backup /usr/bin/python3 /opt/relay/backup.py >> /var/log/backup.log 2>&1"
+      }
+    ]
   },
   {
     "id": "M13",
@@ -396,7 +590,25 @@
     "version": 1,
     "path": "/etc/cron.d/relay-backup",
     "starter": "0 2 * * * backup /usr/bin/python3 /opt/relay/backup.py\n",
-    "solution": "0 2 * * * backup /usr/bin/flock -n /tmp/relay-backup.lock /usr/bin/python3 /opt/relay/backup.py\n"
+    "solution": "0 2 * * * backup /usr/bin/flock -n /tmp/relay-backup.lock /usr/bin/python3 /opt/relay/backup.py\n",
+    "concepts": [
+      "concurrency"
+    ],
+    "prerequisites": [
+      "M12"
+    ],
+    "checks": [
+      {
+        "label": "One active system crontab entry",
+        "type": "lineCount",
+        "value": 1
+      },
+      {
+        "label": "Match schedule, user and explicit command",
+        "type": "normalizedLine",
+        "value": "0 2 * * * backup /usr/bin/flock -n /tmp/relay-backup.lock /usr/bin/python3 /opt/relay/backup.py"
+      }
+    ]
   },
   {
     "id": "M14",
@@ -427,7 +639,13 @@
     "version": 1,
     "starter": "def can_deploy(checks):\n    return True\n",
     "tests": "assert can_deploy({'tests':True,'build':True,'smoke':True}) is True\nassert can_deploy({'tests':True,'build':True}) is False\nassert can_deploy({'tests':True,'build':False,'smoke':True}) is False\nassert can_deploy({'tests':1,'build':True,'smoke':True}) is False",
-    "solution": "def can_deploy(checks):\n    return all(checks.get(name) is True for name in ('tests','build','smoke'))\n"
+    "solution": "def can_deploy(checks):\n    return all(checks.get(name) is True for name in ('tests','build','smoke'))\n",
+    "concepts": [
+      "delivery"
+    ],
+    "prerequisites": [
+      "M09"
+    ]
   },
   {
     "id": "M15",
@@ -458,6 +676,254 @@
     "version": 1,
     "starter": "def deduplicate(events):\n    return events\n",
     "tests": "assert deduplicate([]) == []\nassert deduplicate([{'id':'a','value':1},{'id':'a','value':2},{'id':'b','value':3}]) == [{'id':'a','value':1},{'id':'b','value':3}]\nassert deduplicate([{'id':'b'},{'id':'a'},{'id':'b'}]) == [{'id':'b'},{'id':'a'}]",
-    "solution": "def deduplicate(events):\n    seen = set()\n    result = []\n    for event in events:\n        if event['id'] not in seen:\n            seen.add(event['id'])\n            result.append(event)\n    return result\n"
+    "solution": "def deduplicate(events):\n    seen = set()\n    result = []\n    for event in events:\n        if event['id'] not in seen:\n            seen.add(event['id'])\n            result.append(event)\n    return result\n",
+    "concepts": [
+      "idempotency"
+    ],
+    "prerequisites": [
+      "M09"
+    ]
+  },
+  {
+    "id": "M16",
+    "title": "Count the broken deployments",
+    "track": "python",
+    "kind": "python",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "Apply event aggregation to a deployment stream with duplicate deliveries.",
+    "lesson": [
+      "Relay deployment events are delivered at least once. Count failed deployments by team, but only process the first occurrence of each event ID.",
+      "Use a set for observed IDs and a dictionary for totals. Mark all IDs as seen, including successful events, so a conflicting duplicate cannot rewrite history. Expected time is O(n), with O(u + t) extra space for unique IDs and teams."
+    ],
+    "objective": "Implement failed_deployments(events). Each event contains id, team and status. Count status == \"failed\" once per ID; preserve the first event. Return an empty dict for empty input.",
+    "hints": [
+      "Separate identity from the grouping key.",
+      "Skip IDs you have already processed, even if a later status differs.",
+      "Add the ID to seen before checking its status."
+    ],
+    "quiz": [
+      "A successful event is replayed as failed under the same ID. What happens?",
+      "Keep the first event; do not count the replay.",
+      "Count the failed replay.",
+      "Count both events."
+    ],
+    "answer": 0,
+    "why": "Identity determines whether an event is new; status determines how a new event contributes.",
+    "starter": "def failed_deployments(events):\n    return {}\n",
+    "solution": "def failed_deployments(events):\n    seen, counts = set(), {}\n    for event in events:\n        if event[\"id\"] in seen:\n            continue\n        seen.add(event[\"id\"])\n        if event[\"status\"] == \"failed\":\n            team = event[\"team\"]\n            counts[team] = counts.get(team, 0) + 1\n    return counts\n",
+    "version": 1,
+    "concepts": [
+      "aggregation",
+      "boundaries"
+    ],
+    "prerequisites": [
+      "M07"
+    ],
+    "transferOf": "M07",
+    "tests": "assert failed_deployments([]) == {}\nevents = [dict(id=1, team=\"api\", status=\"failed\"), dict(id=1, team=\"api\", status=\"failed\"), dict(id=2, team=\"web\", status=\"ok\"), dict(id=2, team=\"web\", status=\"failed\"), dict(id=3, team=\"api\", status=\"failed\"), dict(id=4, team=\"web\", status=\"failed\")]\nassert failed_deployments(events) == {\"api\": 2, \"web\": 1}\nassert events[0][\"status\"] == \"failed\"\n"
+  },
+  {
+    "id": "M17",
+    "title": "Prioritize the incident queue",
+    "track": "algorithms",
+    "kind": "python",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "Rank a different operational dataset using an explicit tie-breaking contract.",
+    "lesson": [
+      "A queue needs predictable order under pressure. Incidents with lower severity numbers come first; within a severity, earlier opened timestamps come first; IDs break remaining ties alphabetically.",
+      "Treat input dictionaries as immutable. Python sorted creates a new list; a tuple key expresses the priority rules in order. Sorting n incidents costs O(n log n); slicing selects at most k results. Timestamps in this exercise are UTC ISO strings of the same format."
+    ],
+    "objective": "Implement triage(incidents, k), returning up to k incident IDs. Sort by severity, opened, then id ascending. Return [] when k <= 0 and leave input order unchanged.",
+    "hints": [
+      "Write the ranking rules as a tuple.",
+      "Sort into a new list; do not call incidents.sort().",
+      "Take the first k sorted records only after handling k <= 0."
+    ],
+    "quiz": [
+      "Why use an explicit final ID tie-breaker?",
+      "To make equal-priority results deterministic.",
+      "To remove all sorting cost.",
+      "To change severity automatically."
+    ],
+    "answer": 0,
+    "why": "A deterministic contract makes queue behavior reproducible across input orders.",
+    "starter": "def triage(incidents, k):\n    return [x[\"id\"] for x in incidents[:k]]\n",
+    "solution": "def triage(incidents, k):\n    if k <= 0:\n        return []\n    ranked = sorted(incidents, key=lambda x: (x[\"severity\"], x[\"opened\"], x[\"id\"]))\n    return [x[\"id\"] for x in ranked[:k]]\n",
+    "version": 1,
+    "concepts": [
+      "ordering",
+      "boundaries"
+    ],
+    "prerequisites": [
+      "M10"
+    ],
+    "transferOf": "M10",
+    "tests": "rows = [dict(id=\"z\", severity=2, opened=\"2026-01-01T00:00:00Z\"), dict(id=\"b\", severity=1, opened=\"2026-01-02T00:00:00Z\"), dict(id=\"a\", severity=1, opened=\"2026-01-02T00:00:00Z\"), dict(id=\"c\", severity=1, opened=\"2026-01-01T00:00:00Z\")]\nassert triage(rows, 3) == [\"c\", \"a\", \"b\"]\nassert triage(list(reversed(rows)), 4) == [\"c\", \"a\", \"b\", \"z\"]\nassert triage(rows, 0) == [] and triage(rows, -1) == []\nassert triage([], 5) == []\nassert rows[0][\"id\"] == \"z\", \"Do not mutate the source queue\"\n"
+  },
+  {
+    "id": "M18",
+    "title": "Retry only what can recover",
+    "track": "python",
+    "kind": "python",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "Transfer bounded retries to HTTP response classification.",
+    "lesson": [
+      "Not all failures improve with repetition. In this exercise 429 and every 5xx response are retryable; other statuses return immediately. No sleeps or real network calls occur.",
+      "The attempt budget includes the initial request. On the final allowed attempt, return the last response even if retryable. Reject attempts < 1 before calling the supplied function. Propagate exceptions: the contract covers response codes, not arbitrary programming errors."
+    ],
+    "objective": "Implement request_with_retry(send, attempts). send() returns an integer status. Retry 429 or 500\u2013599 up to the total attempt budget, return the last status, and propagate exceptions.",
+    "hints": [
+      "Validate the budget before any call.",
+      "An ordinary response ends the loop early.",
+      "The last allowed attempt always returns its response."
+    ],
+    "quiz": [
+      "With attempts=3, how many total calls can occur?",
+      "At most three, including the first.",
+      "Four: one plus three retries.",
+      "Unlimited until a 200 appears."
+    ],
+    "answer": 0,
+    "why": "A total attempt budget prevents unbounded load amplification during an outage.",
+    "starter": "def request_with_retry(send, attempts):\n    return send()\n",
+    "solution": "def request_with_retry(send, attempts):\n    if attempts < 1:\n        raise ValueError(\"attempts must be positive\")\n    for index in range(attempts):\n        status = send()\n        if not (status == 429 or 500 <= status <= 599) or index == attempts - 1:\n            return status\n",
+    "version": 1,
+    "concepts": [
+      "retries"
+    ],
+    "prerequisites": [
+      "M09"
+    ],
+    "transferOf": "M09",
+    "tests": "def scenario(statuses, budget, expected, calls):\n    seen = []\n    def send():\n        value = statuses[len(seen)]\n        seen.append(value)\n        return value\n    assert request_with_retry(send, budget) == expected\n    assert len(seen) == calls\nscenario([503, 429, 201], 3, 201, 3)\nscenario([500, 502, 200], 2, 502, 2)\nscenario([404, 200], 3, 404, 1)\nscenario([600], 2, 600, 1)\ncalled = []\ntry:\n    request_with_retry(lambda: called.append(1), 0)\n    assert False, \"Reject zero budget\"\nexcept ValueError:\n    assert called == []\ndef broken():\n    raise RuntimeError(\"transport failed\")\ntry:\n    request_with_retry(broken, 3)\n    assert False, \"Exceptions must propagate\"\nexcept RuntimeError:\n    pass\n"
+  },
+  {
+    "id": "M19",
+    "title": "Replay a deployment journal",
+    "track": "reliability",
+    "kind": "python",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "Rebuild service state without applying duplicate journal records.",
+    "lesson": [
+      "A deployment journal contains changes in chronological order. Every unique event updates the version for its service; a duplicate event ID must have no effect, even if its payload differs.",
+      "Keep deduplication state separate from service state. Two different event IDs for the same service are both valid: the later unique event wins. This distinction is central to replayable operational systems. Expected time is O(n)."
+    ],
+    "objective": "Implement replay(events), returning {service: version}. Process events in order, apply each id once, and retain the latest unique version per service.",
+    "hints": [
+      "One set tracks IDs; one dictionary tracks current service versions.",
+      "A service can have more than one valid event.",
+      "Skip a duplicate before updating the service version."
+    ],
+    "quiz": [
+      "Two distinct event IDs update the same service. Which version wins?",
+      "The later unique event in the journal.",
+      "The first service occurrence forever.",
+      "Whichever version sorts alphabetically last."
+    ],
+    "answer": 0,
+    "why": "Idempotency removes repeated events without suppressing legitimate later changes.",
+    "starter": "def replay(events):\n    return {event[\"service\"]: event[\"version\"] for event in events}\n",
+    "solution": "def replay(events):\n    seen, services = set(), {}\n    for event in events:\n        if event[\"id\"] in seen:\n            continue\n        seen.add(event[\"id\"])\n        services[event[\"service\"]] = event[\"version\"]\n    return services\n",
+    "version": 1,
+    "concepts": [
+      "idempotency",
+      "ordering"
+    ],
+    "prerequisites": [
+      "M15"
+    ],
+    "transferOf": "M15",
+    "tests": "assert replay([]) == {}\nevents = [dict(id=\"a\", service=\"api\", version=\"v1\"), dict(id=\"b\", service=\"api\", version=\"v2\"), dict(id=\"a\", service=\"api\", version=\"v0\"), dict(id=\"c\", service=\"web\", version=\"v3\"), dict(id=\"c\", service=\"other\", version=\"bad\")]\nassert replay(events) == {\"api\": \"v2\", \"web\": \"v3\"}\nassert replay(events + events) == replay(events)\nassert len(events) == 5\n"
+  },
+  {
+    "id": "M20",
+    "title": "Keep every argument intact",
+    "track": "shell",
+    "kind": "config",
+    "minutes": 20,
+    "difficulty": "Core",
+    "summary": "Move from one quoted variable to an arbitrary list of script arguments.",
+    "lesson": [
+      "Relay passes filenames to a wrapper script. Spaces, wildcard characters, leading dashes and even empty arguments must survive unchanged. Unquoted $@ can split words and expand wildcards.",
+      "Quoted \"$@\" expands each positional argument separately. Iterate over it and use a constant printf format. With no arguments, the loop should produce no output. In standalone mode the authored template is checked; the optional Bash runner checks actual output for several argument lists."
+    ],
+    "objective": "Write a Bash loop that prints each argument as <value> on its own line. Preserve empty arguments, spaces and literal wildcard characters; print nothing for zero arguments.",
+    "hints": [
+      "Iterate with for item in \"$@\".",
+      "Use printf with a constant format, not the argument as the format.",
+      "Quote \"$item\" when passing it to printf."
+    ],
+    "quiz": [
+      "How does quoted \"$@\" expand?",
+      "As separate arguments, preserving each original boundary.",
+      "As one joined string.",
+      "As whitespace-split and glob-expanded words."
+    ],
+    "answer": 0,
+    "why": "Quoted \"$@\" preserves the caller\u2019s argument boundaries, including empty strings.",
+    "starter": "#!/usr/bin/env bash\nfor item in $@; do\n    printf \"<%s>\\n\" $item\ndone\n",
+    "solution": "#!/usr/bin/env bash\nfor item in \"$@\"; do\n    printf \"<%s>\\n\" \"$item\"\ndone\n",
+    "version": 1,
+    "concepts": [
+      "quoting"
+    ],
+    "prerequisites": [
+      "M06"
+    ],
+    "transferOf": "M06",
+    "path": "arguments.sh",
+    "runtime": "bash",
+    "checks": [
+      {
+        "label": "Preserve positional argument boundaries",
+        "type": "line",
+        "value": "for item in \"$@\"; do"
+      },
+      {
+        "label": "Print each argument with a fixed format",
+        "type": "line",
+        "value": "printf \"<%s>\\n\" \"$item\""
+      },
+      {
+        "label": "Close the loop",
+        "type": "line",
+        "value": "done"
+      }
+    ],
+    "cases": [
+      {
+        "label": "Spaces, globs and empty values",
+        "args": [
+          "incident report.txt",
+          "*",
+          "",
+          "-n",
+          "100%"
+        ],
+        "stdin": "",
+        "stdout": "<incident report.txt>\n<*>\n<>\n<-n>\n<100%>\n",
+        "exit": 0
+      },
+      {
+        "label": "No arguments",
+        "args": [],
+        "stdin": "",
+        "stdout": "",
+        "exit": 0
+      },
+      {
+        "label": "One ordinary argument",
+        "args": [
+          "relay"
+        ],
+        "stdin": "",
+        "stdout": "<relay>\n",
+        "exit": 0
+      }
+    ]
   }
 ]

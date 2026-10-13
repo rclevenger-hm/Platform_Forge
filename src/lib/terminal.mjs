@@ -89,55 +89,17 @@ export function command(state, input) {
     output = `${cmd}: not supported by this simulation. Type help for the command set. Use Docker tools for an actual shell.`;
   return { state: s, output };
 }
-export function terminalChecks(id, s) {
-  const map = {
-    M01: [
-      ["Read the handoff", s.read.includes("/home/learner/handoff.txt")],
-      ["Inspect the service log", s.read.includes("/var/log/relay.log")],
-    ],
-    M02: [["Owner read/write only", s.mode === "600"]],
-    M03: [
-      ["Read failure evidence", s.read.includes("/var/log/relay.log")],
-      ["Service running", s.running],
-    ],
-    M04: [
-      ["Inspect disk usage", s.inspectedDisk],
-      ["Clear debug log", s.cleared],
-      ["Preserve audit log", !!s.files["/var/log/audit.log"]],
-    ],
-  };
-  return map[id] || [];
+export function terminalChecks(mission, state) {
+  return (mission.checks || []).map(c => [c.label,
+    c.type === "read" ? state.read.includes(c.value) :
+    c.type === "state" ? state[c.key] === c.value :
+    c.type === "filePresent" ? !!state.files[c.value] : false]);
 }
-export function configChecks(id, code) {
-  const lines = code
-    .split("\n")
-    .map((x) => x.trim())
-    .filter((x) => x && !x.startsWith("#"));
-  if (id === "M05")
-    return [
-      [
-        "Enable pipeline error propagation",
-        lines.some((x) => /^set\s+(?:-o\s+pipefail|-euo\s+pipefail)$/.test(x)),
-      ],
-      ["Keep the diagnostic pipeline", lines.includes("false | cat")],
-    ];
-  if (id === "M06")
-    return [
-      [
-        "Preserve the filename variable",
-        lines.includes('file="incident report.txt"'),
-      ],
-      ["Pass one quoted argument", lines.includes('printf "%s\\n" "$file"')],
-    ];
-  const expected =
-    id === "M12"
-      ? "0 2 * * * backup /usr/bin/python3 /opt/relay/backup.py >> /var/log/backup.log 2>&1"
-      : "0 2 * * * backup /usr/bin/flock -n /tmp/relay-backup.lock /usr/bin/python3 /opt/relay/backup.py";
-  return [
-    ["One active system crontab entry", lines.length === 1],
-    [
-      "Schedule, user and explicit command match the lesson contract",
-      lines[0]?.replace(/\s+/g, " ") === expected,
-    ],
-  ];
+export function configChecks(mission, code) {
+  const lines = code.split("\n").map(x => x.trim()).filter(x => x && !x.startsWith("#"));
+  return (mission.checks || []).map(c => [c.label,
+    c.type === "line" ? lines.includes(c.value) :
+    c.type === "oneOfLines" ? c.value.some(x => lines.includes(x)) :
+    c.type === "lineCount" ? lines.length === c.value :
+    c.type === "normalizedLine" ? lines.some(x => x.replace(/\s+/g, " ") === c.value) : false]);
 }

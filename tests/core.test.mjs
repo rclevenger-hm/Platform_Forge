@@ -19,8 +19,8 @@ const missions = JSON.parse(
   readFileSync(new URL("../src/data/missions.json", import.meta.url)),
 );
 test("every mission has authored learning, explanation and three hints", () => {
-  assert.equal(missions.length, 15);
-  assert.equal(new Set(missions.map((m) => m.id)).size, 15);
+  assert.equal(missions.length, 20);
+  assert.equal(new Set(missions.map((m) => m.id)).size, 20);
   for (const m of missions) {
     assert.equal(m.hints.length, 3);
     assert.equal(m.quiz.length, 4);
@@ -36,11 +36,11 @@ test("every mission has authored learning, explanation and three hints", () => {
 test("template checks reject starter configurations and accept authored solutions", () => {
   for (const m of missions.filter((m) => m.kind === "config")) {
     assert.ok(
-      configChecks(m.id, m.starter).some((x) => !x[1]),
+      configChecks(m, m.starter).some((x) => !x[1]),
       m.id,
     );
     assert.ok(
-      configChecks(m.id, m.solution).every((x) => x[1]),
+      configChecks(m, m.solution).every((x) => x[1]),
       m.id,
     );
   }
@@ -48,10 +48,10 @@ test("template checks reject starter configurations and accept authored solution
 test("terminal goals require observable state changes", () => {
   for (const m of missions.filter((m) => m.kind === "terminal")) {
     let state = initialTerminal();
-    assert.ok(terminalChecks(m.id, state).some((x) => !x[1]));
+    assert.ok(terminalChecks(m, state).some((x) => !x[1]));
     for (const input of m.commands) state = command(state, input).state;
     assert.ok(
-      terminalChecks(m.id, state).every((x) => x[1]),
+      terminalChecks(m, state).every((x) => x[1]),
       m.id,
     );
   }
@@ -64,7 +64,7 @@ test("simulated shell cannot delete protected audit evidence or execute arbitrar
   assert.match(command(s, "curl bad.example").output, /not supported/);
 });
 test("progress import rejects invalid results and prototype keys", () => {
-  assert.throws(() => validateProgress({ version: 2, attempts: [] }));
+  assert.throws(() => validateProgress({ version: 3, attempts: [] }));
   assert.throws(() =>
     validateProgress({ version: 1, attempts: [{ passed: "true" }] }),
   );
