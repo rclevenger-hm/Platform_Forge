@@ -118,24 +118,47 @@ test("reachable mentor enables contextual hints and an outage leaves authored hi
   await page.getByRole("button", { name: /Reveal a hint/ }).click();
   await expect(page.getByText("Start with pwd and ls.")).toBeVisible();
 });
-test("capture the implemented workspace for visual review", async ({
-  page,
-}) => {
-  await mkdir("test-results/previews", { recursive: true });
-  await page.setViewportSize({ width: 1440, height: 1080 });
-  await page.goto("./");
-  await page.screenshot({
-    path: "test-results/previews/home.png",
-    fullPage: true,
-  });
-  await page.getByRole("button", { name: "Continue your journey" }).click();
-  await page.screenshot({
-    path: "test-results/previews/mission.png",
-    fullPage: true,
-  });
-  await page.getByRole("button", { name: "Design Lab", exact: true }).click();
-  await page.screenshot({
-    path: "test-results/previews/design.png",
-    fullPage: true,
-  });
+test("capture the implemented workspace for visual review", async ({ page }) => {
+  const { captureReview } = await import('../../scripts/capture-review.mjs');
+  await captureReview(page, missions);
+});
+
+test('legacy progress migrates into concept reviews and authoring rejects broken contracts', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('platform-forge:v1', JSON.stringify({
+    version: 1, attempts: [{id:'legacy', missionId:'M07', mode:'browser Python', passed:true, hints:0, at:'2026-01-01T00:00:00Z'}], notes:{M07:'Legacy handoff'}, drafts:{}, designs:[]
+  })));
+  await page.goto('./#Review');
+  await expect(page.getByText('Independent practice; transfer unverified')).toBeVisible();
+  await page.getByRole('button', {name:'Try the transfer'}).click();
+  await expect(page.getByRole('heading', {name:'Count the broken deployments'})).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('platform-forge:v1')).version)).toBe(2);
+  await page.getByRole('button', {name:'Author', exact:true}).click();
+  await expect(page.getByText('VALID MISSION CONTRACT', {exact:true})).toBeVisible();
+  await page.getByLabel('Mission JSON').fill('{"id":"NEW"}');
+  await expect(page.getByText('DRAFT NEEDS CHANGES')).toBeVisible();
+  await expect(page.getByRole('button', {name:'Export validated lesson'})).toBeDisabled();
+  await page.getByLabel('Mission JSON').fill(JSON.stringify({...missions[0], id:'NEW_21'}));
+  await expect(page.getByText('VALID MISSION CONTRACT', {exact:true})).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', {name:'Export validated lesson'}).click();
+  expect((await download).suggestedFilename()).toBe('NEW_21.json');
+});
+
+test('Bash execution is offered only by a capable runner and standalone checks survive an outage', async ({ page }) => {
+  await page.route('**/api/capabilities', route => route.fulfill({json:{connected:true, tutor:false, runner:true, runnerLanguages:['bash']}}));
+  await page.route('**/api/run', route => route.fulfill({json:{passed:true, output:'All practice checks passed.'}}));
+  await page.goto('./#Campaign');
+  await page.getByRole('button', {name:/M20 Keep every argument intact/}).click();
+  const m = missions.find(m => m.id === 'M20');
+  await page.getByLabel('Execution engine').selectOption('docker');
+  await page.getByLabel('Code editor').fill(m.solution);
+  await page.getByRole('radio', {name:m.quiz[m.answer+1], exact:true}).check();
+  await page.getByRole('button', {name:'Run checks & submit'}).click();
+  await expect(page.getByText('Mission complete. Nice work.')).toBeVisible();
+  await page.route('**/api/run', route => route.fulfill({status:503,json:{error:'Lab unavailable.'}}));
+  await page.getByRole('button', {name:'Run checks & submit'}).click();
+  await expect(page.getByLabel('Execution output')).toContainText('Lab unavailable.');
+  await page.getByLabel('Execution engine').selectOption('browser');
+  await page.getByRole('button', {name:'Run checks & submit'}).click();
+  await expect(page.getByText('Mission complete. Nice work.')).toBeVisible();
 });
