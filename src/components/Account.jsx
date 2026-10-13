@@ -12,7 +12,7 @@ export default function Account({account,progress,navigate}) {
   }
   return <>
     <div className="eyebrow">YOUR LEARNING, SAVED</div>
-    <h1>{session ? `Welcome, ${session.user.username}.` : 'Keep your progress with you.'}</h1>
+    <h1 className="account-title">{session ? `Welcome, ${session.user.username}.` : 'Keep your progress with you.'}</h1>
     <p className="lede">Sign in to save missions, incident notes and design experiments across devices. You can always learn in guest mode.</p>
     <div className="account-grid">
       <section className="panel">

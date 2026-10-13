@@ -49,11 +49,13 @@ export async function captureReview(page, missions) {
   await page.getByRole('textbox',{name:'Username',exact:true}).waitFor();
   await capture('account-login');
   await page.getByRole('button',{name:'Create account',exact:true}).click();
-  await page.getByRole('textbox',{name:'Username',exact:true}).fill('visual_' + Date.now());
+  await page.getByRole('textbox',{name:'Username',exact:true}).fill('learner_preview');
   await page.getByLabel('Password',{exact:true}).fill('Disposable visual review password');
   await page.getByRole('button',{name:'Create my account'}).click();
-  await page.getByRole('heading',{name:/Welcome, visual_/}).waitFor();
+  await page.getByRole('heading',{name:'Welcome, learner_preview.'}).waitFor();
+  const accountSave = page.waitForResponse(response => response.url().endsWith('/api/account/progress') && response.request().method() === 'POST' && response.status() === 200);
   await page.getByRole('button',{name:'Import guest progress'}).click();
+  await accountSave;
   await page.getByText('Progress saved',{exact:true}).waitFor();
   await capture('account');
   const notes = {

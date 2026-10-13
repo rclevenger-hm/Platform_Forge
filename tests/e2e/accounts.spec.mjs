@@ -39,6 +39,9 @@ test('real account login, guest import, cross-device sync and logout keep learne
     await second.reload();
     await expect(second.getByLabel('Mission notes')).toHaveValue('Account note follows this learner.');
   } finally {await context.close();}
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.setViewportSize({width:1440,height:1000});
   await page.getByRole('button',{name:'Sign out',exact:true}).click();
   await expect(page.getByText('Signed out. Guest progress is separate from your account.')).toBeVisible();
   await page.getByRole('button',{name:'Practice',exact:true}).click();

@@ -1457,3 +1457,5 @@ footer {
 .run-record code { overflow-wrap:anywhere; }
 .run-record pre { max-height:260px; overflow:auto; }
 .managed-run { padding:16px 0; }
+
+.account-title { overflow-wrap:anywhere; }
