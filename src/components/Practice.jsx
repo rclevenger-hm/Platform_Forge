@@ -230,17 +230,6 @@ export default function Practice({
                 value={code}
                 onChange={(e) => edit(e.target.value)}
                 maxLength={24000}
-                onKeyDown={(e) => {
-                  if (e.key === "Tab") {
-                    e.preventDefault();
-                    const a = e.target.selectionStart,
-                      b = e.target.selectionEnd;
-                    edit(code.slice(0, a) + "    " + code.slice(b));
-                    requestAnimationFrame(() => {
-                      e.target.selectionStart = e.target.selectionEnd = a + 4;
-                    });
-                  }
-                }}
               />
             )}
             <div className="workspace-footer">
