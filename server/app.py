@@ -2,6 +2,7 @@
 import hmac
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -60,6 +61,7 @@ def capabilities():
             health = upstream(endpoint(setting('RUNNER_URL'), 'health'), token=setting('RUNNER_TOKEN'), timeout=3)
             result['runner'] = health.get('ready') is True
             offered = health.get('languages', ['python'])
+            result['runnerJobs'] = result['runner'] and health.get('jobProtocol') == 1
             result['runnerLanguages'] = [x for x in ('python', 'bash') if isinstance(offered, list) and x in offered] if result['runner'] else []
         except Exception:
             pass
@@ -95,21 +97,39 @@ def tutor(body):
     return {'answer': answer[:16000]}
 
 
-def run(body):
-    mission = MISSIONS.get(body.get('missionId'))
+def run_payload(body):
+    mission_id = body.get('missionId')
+    mission = MISSIONS.get(mission_id) if isinstance(mission_id, str) else None
     code = body.get('code')
     if not mission or not (mission['kind'] == 'python' or mission.get('runtime') == 'bash') or not isinstance(code, str) or len(code) > 24000:
         raise ValueError('Choose an executable mission and provide at most 24,000 characters of code.')
+    return {'missionId': mission['id'], 'code': code}
+
+
+def runner_request(path, body=None, timeout=5):
     if not setting('RUNNER_URL') or not setting('RUNNER_TOKEN'):
         raise ValueError('Docker runner is not configured. Use the standalone practice mode.')
-    reply = upstream(endpoint(setting('RUNNER_URL'), 'run'), {'missionId': mission['id'], 'code': code}, token=setting('RUNNER_TOKEN'), timeout=20)
+    return upstream(endpoint(setting('RUNNER_URL'), path), body, token=setting('RUNNER_TOKEN'), timeout=timeout)
+
+
+def run(body):
+    reply = runner_request('run', run_payload(body), timeout=25)
     if not isinstance(reply.get('passed'), bool) or not isinstance(reply.get('output'), str):
         raise ValueError('Invalid runner response.')
     return {'passed': reply['passed'], 'output': reply['output'][:16000]}
 
 
+def create_job(body):
+    payload = run_payload(body)
+    job_id = body.get('jobId')
+    if not isinstance(job_id, str) or not re.fullmatch(r'[a-f0-9]{32}', job_id):
+        raise ValueError('Provide a 32-character run ID.')
+    payload['jobId'] = job_id
+    return runner_request('jobs', payload)
+
+
 class Handler(BaseHTTPRequestHandler):
-    server_version = 'PlatformForge/0.2'
+    server_version = 'PlatformForge/0.2.2'
 
     def log_message(self, fmt, *args):
         # Do not log body, token, URL parameters, or provider responses.
@@ -158,21 +178,37 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(403, {'error': 'Origin not allowed.'})
         if not self.authenticated():
             return self.reply(401, {'error': 'Enter the backend access token in Settings.'})
-        if self.path != '/api/capabilities':
+        job = re.fullmatch(r'/api/jobs/([a-f0-9]{32})', self.path)
+        if self.path != '/api/capabilities' and not job:
             return self.reply(404, {'error': 'Not found.'})
         if not SLOTS.acquire(blocking=False):
             return self.reply(429, {'error': 'Backend busy. Try again shortly.'})
         try:
-            self.reply(200, capabilities())
+            self.reply(200, runner_request('jobs/' + job[1]) if job else capabilities())
+        except urllib.error.HTTPError as error:
+            self.runner_error(error)
+        except Exception:
+            self.reply(503, {'error': 'Runner unavailable. Execution deadlines remain enforced by the runner.'})
         finally:
             SLOTS.release()
+
+    def runner_error(self, error):
+        messages = {404: 'Run not found or expired. Local history is still available.',
+                    409: 'Run ID conflicts with an earlier submission.',
+                    429: 'Runner busy. Wait for an active run to finish or cancel it.',
+                    400: 'Invalid run request.'}
+        self.reply(error.code if error.code in messages else 503,
+                   {'error': messages.get(error.code, 'Runner unavailable. Check the connection in Settings.')})
 
     def do_POST(self):
         if not self.origin_allowed():
             return self.reply(403, {'error': 'Origin not allowed.'})
         if not self.authenticated():
             return self.reply(401, {'error': 'Enter the backend access token in Settings.'})
-        action = {'/api/tutor': tutor, '/api/run': run}.get(self.path)
+        cancel = re.fullmatch(r'/api/jobs/([a-f0-9]{32})/cancel', self.path)
+        action = {'/api/tutor': tutor, '/api/run': run, '/api/jobs': create_job}.get(self.path)
+        if cancel:
+            action = lambda body: runner_request('jobs/' + cancel[1] + '/cancel', {})
         if not action:
             return self.reply(404, {'error': 'Not found.'})
         if not SLOTS.acquire(blocking=False):
@@ -187,7 +223,9 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length))
             if not isinstance(body, dict):
                 raise ValueError('Expected a JSON object.')
-            self.reply(200, action(body))
+            self.reply(202 if self.path == '/api/jobs' else 200, action(body))
+        except urllib.error.HTTPError as error:
+            self.runner_error(error) if self.path.startswith('/api/jobs') else self.reply(503, {'error': 'Optional service unavailable.'})
         except (ValueError, TypeError, json.JSONDecodeError) as error:
             self.reply(400, {'error': str(error)[:200]})
         except Exception:
