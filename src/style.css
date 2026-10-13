@@ -1352,3 +1352,20 @@ footer {
     scroll-behavior: auto !important;
   }
 }
+
+/* Content authoring and concept review */
+.prerequisite-note { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 18px; border-left: 3px solid var(--lime); background: #142126; margin-bottom: 20px; }
+.prerequisite-note small { flex-basis: 100%; color: #9fafb7; }
+.transfer-note { color: #bfe778; }
+.review-summary { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 24px; }
+.review-summary p { margin-bottom: 0; }
+.review-card { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.review-card h2 { font-size: 21px; }
+.review-card p, .review-card h2 { margin: 0; }
+.review-card button { margin-top: auto; }
+.evidence-label { color: #bfe778; font-size: 13px; }
+.author-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
+.author-editor { min-height: 650px; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; tab-size: 2; }
+.author-errors { max-height: 280px; overflow: auto; color: #ffb8a8; }
+.author-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 1000px) { .author-grid { grid-template-columns: 1fr; } }

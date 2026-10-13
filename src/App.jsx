@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   House,
+  Repeat2,
+  FileCode2,
   Map,
   Terminal,
   Network,
@@ -22,13 +24,17 @@ import DesignLab from "./components/DesignLab";
 import Portfolio from "./components/Portfolio";
 import Interview from "./components/Interview";
 import Settings from "./components/Settings";
+import Review from "./components/Review";
+import Author from "./components/Author";
 const nav = [
   ["Home", House],
   ["Campaign", Map],
   ["Practice", Terminal],
+  ["Review", Repeat2],
   ["Design Lab", Network],
   ["Interview", MessagesSquare],
   ["Portfolio", NotebookPen],
+  ["Author", FileCode2],
   ["Settings", SettingsIcon],
 ];
 function route() {
@@ -141,7 +147,7 @@ export default function App() {
             >
               <Icon size={19} />
               {name}
-              {name === "Campaign" && <span className="nav-count">15</span>}
+              {name === "Campaign" && <span className="nav-count">{missions.length}</span>}
             </button>
           ))}
         </nav>
@@ -161,7 +167,7 @@ export default function App() {
           >
             Open source <ExternalLink size={13} />
           </a>
-          <small>v0.1 · Relay foundations</small>
+          <small>v0.2 · Practice that travels</small>
         </div>
       </aside>
       <div className="main-shell">
@@ -198,6 +204,8 @@ export default function App() {
           {page === "Design Lab" && <DesignLab {...common} />}{" "}
           {page === "Portfolio" && <Portfolio {...common} />}{" "}
           {page === "Interview" && <Interview {...common} />}{" "}
+          {page === "Review" && <Review {...common} />}
+          {page === "Author" && <Author {...common} />}
           {page === "Settings" && <Settings {...common} />}
         </main>
         <footer>

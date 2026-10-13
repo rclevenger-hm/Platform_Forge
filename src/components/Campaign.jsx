@@ -14,7 +14,7 @@ export default function Campaign({ missions, tracks, progress, openMission }) {
       <div className="eyebrow">LEARN BY DOING</div>
       <h1>The Relay campaign</h1>
       <p className="lede">
-        Fifteen original missions. Read, investigate, fix, explain, then
+        {missions.length} original missions. Read, investigate, fix, explain, then
         revisit.
       </p>
       <div className="filter-bar">
@@ -48,7 +48,7 @@ export default function Campaign({ missions, tracks, progress, openMission }) {
             onClick={() => openMission(m.id)}
           >
             <span className="mission-number">
-              {status(progress, m.id) !== "Not started" ? (
+              {["Independent pass", "Completed with help"].includes(status(progress, m)) ? (
                 <CheckCircle2 />
               ) : (
                 m.id
@@ -63,7 +63,7 @@ export default function Campaign({ missions, tracks, progress, openMission }) {
                   : "Browser simulation"}
               </span>{" "}
               <span className="muted">
-                {m.minutes} min · {status(progress, m.id)}
+                {m.minutes} min · {status(progress, m)}
               </span>
             </div>
             <ArrowRight size={19} />
