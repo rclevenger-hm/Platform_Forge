@@ -12,10 +12,11 @@ EXPOSE 8080
 
 FROM python:3.13-alpine AS api
 WORKDIR /app
-COPY server/app.py server/app.py
+COPY server/app.py server/accounts.py server/manage_accounts.py server/
+RUN mkdir -p /data && chown 65534:65534 /data
 COPY src/data/missions.json src/data/missions.json
 USER 65534:65534
-ENV HOST=0.0.0.0 PORT=8787 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ENV DATA_DIR=/data HOST=0.0.0.0 PORT=8787 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 EXPOSE 8787
 CMD ["python", "server/app.py"]
 

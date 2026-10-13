@@ -7,6 +7,8 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from http.cookies import SimpleCookie, CookieError
+from accounts import AccountStore, AccountError, RateLimiter, SESSION_SECONDS, MAX_PROGRESS, csrf_token
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -16,6 +18,29 @@ MISSIONS = {m['id']: m for m in json.loads((ROOT / 'src/data/missions.json').rea
 MAX_BODY = 40000
 MAX_REPLY = 150000
 SLOTS = threading.BoundedSemaphore(4)
+AUTH_LIMIT = RateLimiter()
+STORES = {}
+STORE_LOCK = threading.Lock()
+
+
+def account_store():
+    path = str(Path(setting('DATA_DIR', str(ROOT / 'data'))) / 'accounts.sqlite3')
+    with STORE_LOCK:
+        if path not in STORES:
+            STORES[path] = AccountStore(path)
+        return STORES[path]
+
+
+def cookie_name():
+    return '__Host-forge_session' if setting('COOKIE_SECURE', 'false') == 'true' else 'forge_session'
+
+
+def session_cookie(token, clear=False):
+    secure = setting('COOKIE_SECURE', 'false') == 'true'
+    same_site = setting('COOKIE_SAMESITE', 'Lax').capitalize()
+    if same_site not in ('Lax', 'Strict', 'None') or (same_site == 'None' and not secure):
+        raise ValueError('Cross-site cookies require COOKIE_SECURE=true.')
+    return f'{cookie_name()}={token}; Path=/; HttpOnly; SameSite={same_site}; Max-Age={0 if clear else SESSION_SECONDS}' + ('; Secure' if secure else '')
 
 
 def setting(name, default=''):
@@ -141,22 +166,111 @@ class Handler(BaseHTTPRequestHandler):
         return not origin or origin in allowed
 
     def authenticated(self):
+        user = self.session_user()
+        if user:
+            return self.command != 'POST' or hmac.compare_digest(self.headers.get('X-CSRF-Token', ''), csrf_token(self.session_token()))
         token = setting('API_TOKEN')
         if token:
             return hmac.compare_digest(self.headers.get('Authorization', ''), 'Bearer ' + token)
         return self.client_address[0] in ('127.0.0.1', '::1')
 
-    def reply(self, status, value):
+    def session_token(self):
+        try:
+            cookies = SimpleCookie(self.headers.get('Cookie', ''))
+            return cookies[cookie_name()].value if cookie_name() in cookies else ''
+        except CookieError:
+            return ''
+
+    def session_user(self):
+        token = self.session_token()
+        return account_store().session(token) if token else None
+
+    def actor(self):
+        user = self.session_user()
+        return 'user:' + user['id'] if user else 'operator'
+
+    def owned_job(self, job_id):
+        if not account_store().owns_job(job_id, self.actor()):
+            raise AccountError(404, 'Run not found or expired.')
+        return job_id
+
+    def account_api(self):
+        if not SLOTS.acquire(blocking=False):
+            return self.reply(429, {'error': 'Backend busy. Try again shortly.'})
+        try:
+            user = self.session_user()
+            if self.command == 'GET':
+                if self.path == '/api/auth/status':
+                    return self.reply(200, {'available': True, 'registration': setting('REGISTRATION_OPEN', 'true') == 'true',
+                        'user': user, 'csrf': csrf_token(self.session_token()) if user else ''})
+                if self.path == '/api/account/progress':
+                    if not user:
+                        raise AccountError(401, 'Sign in to load your account progress.')
+                    return self.reply(200, account_store().progress(user['id']))
+                return self.reply(404, {'error': 'Not found.'})
+            if self.headers.get('X-Forge-Client') != '1':
+                raise AccountError(403, 'Missing application request header.')
+            body = self.read_body(MAX_PROGRESS + 1000 if self.path == '/api/account/progress' else 2000)
+            if self.path in ('/api/auth/register', '/api/auth/login'):
+                AUTH_LIMIT.check('peer:' + self.client_address[0], limit=30)
+                AUTH_LIMIT.check('username:' + str(body.get('username', '')).lower()[:32])
+                # Validate cookie configuration before creating any account/session.
+                session_cookie('')
+                if self.path.endswith('/register'):
+                    if setting('REGISTRATION_OPEN', 'true') != 'true':
+                        raise AccountError(403, 'Registration is closed on this server. Ask its owner for access.')
+                    user = account_store().register(body.get('username'), body.get('password'))
+                else:
+                    user = account_store().login(body.get('username'), body.get('password'))
+                token = account_store().new_session(user)
+                if self.session_token():
+                    account_store().revoke(self.session_token())
+                return self.reply(200, {'user': user, 'csrf': csrf_token(token)}, cookie=session_cookie(token))
+            if not user:
+                raise AccountError(401, 'Your session expired. Sign in to sync your saved work.')
+            if not hmac.compare_digest(self.headers.get('X-CSRF-Token', ''), csrf_token(self.session_token())):
+                raise AccountError(403, 'Session verification failed. Sign in again.')
+            if self.path == '/api/auth/logout':
+                account_store().revoke(self.session_token())
+                return self.reply(200, {'ok': True}, cookie=session_cookie('', clear=True))
+            if self.path == '/api/account/progress':
+                return self.reply(200, account_store().save_progress(user['id'], body.get('revision'), body.get('progress')))
+            self.reply(404, {'error': 'Not found.'})
+        except AccountError as error:
+            self.reply(error.status, {'error': str(error)})
+        except (ValueError, TypeError):
+            self.reply(400, {'error': 'Invalid account request.'})
+        except Exception:
+            self.reply(503, {'error': 'Account storage unavailable. Your device copy is unchanged.'})
+        finally:
+            SLOTS.release()
+
+    def read_body(self, maximum=MAX_BODY):
+        if self.headers.get_content_type() != 'application/json':
+            raise ValueError('Send application/json.')
+        length = int(self.headers.get('Content-Length', '0'))
+        if not 0 < length <= maximum:
+            raise ValueError('Request is empty or too large.')
+        self.connection.settimeout(10)
+        body = json.loads(self.rfile.read(length))
+        if not isinstance(body, dict):
+            raise ValueError('Expected a JSON object.')
+        return body
+
+    def reply(self, status, value, cookie=None):
         raw = json.dumps(value).encode()
         self.send_response(status)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(raw)))
         self.send_header('Cache-Control', 'no-store')
         self.send_header('X-Content-Type-Options', 'nosniff')
+        if cookie:
+            self.send_header('Set-Cookie', cookie)
         origin = self.headers.get('Origin')
         if origin and self.origin_allowed():
             self.send_header('Access-Control-Allow-Origin', origin)
             self.send_header('Vary', 'Origin')
+            self.send_header('Access-Control-Allow-Credentials', 'true')
         self.end_headers()
         self.wfile.write(raw)
 
@@ -167,8 +281,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get('Origin'):
             self.send_header('Access-Control-Allow-Origin', self.headers['Origin'])
             self.send_header('Vary', 'Origin')
+            self.send_header('Access-Control-Allow-Credentials', 'true')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, X-Forge-Client')
         self.end_headers()
 
     def do_GET(self):
@@ -176,6 +291,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'ok': True})
         if not self.origin_allowed():
             return self.reply(403, {'error': 'Origin not allowed.'})
+        if self.path.startswith(('/api/auth/', '/api/account/')):
+            return self.account_api()
         if not self.authenticated():
             return self.reply(401, {'error': 'Enter the backend access token in Settings.'})
         job = re.fullmatch(r'/api/jobs/([a-f0-9]{32})', self.path)
@@ -184,7 +301,9 @@ class Handler(BaseHTTPRequestHandler):
         if not SLOTS.acquire(blocking=False):
             return self.reply(429, {'error': 'Backend busy. Try again shortly.'})
         try:
-            self.reply(200, runner_request('jobs/' + job[1]) if job else capabilities())
+            self.reply(200, runner_request('jobs/' + self.owned_job(job[1])) if job else capabilities())
+        except AccountError as error:
+            self.reply(error.status, {'error': str(error)})
         except urllib.error.HTTPError as error:
             self.runner_error(error)
         except Exception:
@@ -203,27 +322,29 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.origin_allowed():
             return self.reply(403, {'error': 'Origin not allowed.'})
+        if self.path.startswith(('/api/auth/', '/api/account/')):
+            return self.account_api()
         if not self.authenticated():
             return self.reply(401, {'error': 'Enter the backend access token in Settings.'})
         cancel = re.fullmatch(r'/api/jobs/([a-f0-9]{32})/cancel', self.path)
         action = {'/api/tutor': tutor, '/api/run': run, '/api/jobs': create_job}.get(self.path)
         if cancel:
-            action = lambda body: runner_request('jobs/' + cancel[1] + '/cancel', {})
+            action = lambda body: runner_request('jobs/' + self.owned_job(cancel[1]) + '/cancel', {})
         if not action:
             return self.reply(404, {'error': 'Not found.'})
         if not SLOTS.acquire(blocking=False):
             return self.reply(429, {'error': 'Backend busy. Try again shortly.'})
         try:
-            if self.headers.get_content_type() != 'application/json':
-                raise ValueError('Send application/json.')
-            length = int(self.headers.get('Content-Length', '0'))
-            if not 0 < length <= MAX_BODY:
-                raise ValueError('Request is empty or too large.')
-            self.connection.settimeout(10)
-            body = json.loads(self.rfile.read(length))
-            if not isinstance(body, dict):
-                raise ValueError('Expected a JSON object.')
+            body = self.read_body()
+            if self.path == '/api/jobs':
+                job_id = body.get('jobId')
+                if not isinstance(job_id, str) or not re.fullmatch(r'[a-f0-9]{32}', job_id):
+                    raise ValueError('Invalid run ID.')
+                run_payload(body)
+                account_store().claim_job(job_id, self.actor())
             self.reply(202 if self.path == '/api/jobs' else 200, action(body))
+        except AccountError as error:
+            self.reply(error.status, {'error': str(error)})
         except urllib.error.HTTPError as error:
             self.runner_error(error) if self.path.startswith('/api/jobs') else self.reply(503, {'error': 'Optional service unavailable.'})
         except (ValueError, TypeError, json.JSONDecodeError) as error:

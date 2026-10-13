@@ -13,6 +13,9 @@ services:
   api:
     build: { context: ., target: api }
     environment:
+      REGISTRATION_OPEN: ${REGISTRATION_OPEN:-true}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-Lax}
       API_TOKEN: ${API_TOKEN:-}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
@@ -20,6 +23,7 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       RUNNER_URL: ${RUNNER_URL:-}
       RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+    volumes: ["account-data:/data"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
@@ -53,3 +57,6 @@ services:
     read_only: true
     tmpfs: [/tmp]
     restart: unless-stopped
+
+volumes:
+  account-data:
