@@ -35,7 +35,7 @@ The gateway uses explicit CORS origins, constant-time token comparison, four con
 
 The opt-in runner has access to a Docker daemon socket. That socket confers broad authority over that daemon. Container flags do not make socket access safe for a shared workstation or a hostile public service. Use a dedicated lab VM/daemon, preferably rootless, without valuable workloads or credentials. The application API never mounts that socket.
 
-This v0.2 deployment targets one trusted learner on a local host. It does not implement internet-facing account authentication, tenant isolation, distributed rate limiting, VM lifecycle management, billing or a hardened public sandbox. Bound ports to loopback by default. Use TLS, authentication and a dedicated isolated runner before exposing optional services beyond that boundary.
+This v0.2.1 deployment targets one trusted learner on a local host. It does not implement internet-facing account authentication, tenant isolation, distributed rate limiting, VM lifecycle management, billing or a hardened public sandbox. Bound ports to loopback by default. Use TLS, authentication and a dedicated isolated runner before exposing optional services beyond that boundary.
 
 ## Deployment shapes
 
@@ -53,6 +53,14 @@ Primary technical references: [Ollama compatibility](https://docs.ollama.com/api
 
 `src/lib/curriculum.mjs` is the executable mission contract. Build and test commands validate field limits, check types, concepts, references and prerequisite cycles. Browser terminal/config checks interpret a fixed set of data descriptors; they never evaluate JavaScript from content. Authoring previews validate JSON but do not execute imported Python or Bash.
 
-Progress schema v2 retains the original storage key for automatic in-place migration. Legacy attempts refer to content version 1. New attempts snapshot content version and concept keys. The review schedule is derived deterministically from exported attempt evidence; failure/help resets to one day and consecutive independent passes extend to 3/7/14/30 days. Separate mission IDs establish transfer evidence. Updating a mission version preserves earlier portfolio records while requesting fresh practice.
+Progress schema v3 retains the original storage key for automatic in-place migration. Legacy attempts refer to content version 1. New attempts snapshot content version and concept keys. The review schedule is derived deterministically from exported attempt evidence; failure/help resets to one day and consecutive independent passes extend to 3/7/14/30 days. Separate mission IDs establish transfer evidence. Updating a mission version preserves earlier portfolio records while requesting fresh practice.
 
 Bash source is serialized into a trusted Python harness as data, written to a temporary file, and invoked as an argument array with `bash --noprofile --norc`. Repository-authored cases check exact output and exit status, including empty arguments and wildcard characters. Each case has a two-second subprocess deadline within the container's overall ten-second deadline. No browser-supplied tests or arbitrary mission definitions reach the runner. Health reports installed language images separately; missing Bash does not disable Python.
+
+## Guided practice and editable topology
+
+The daily plan is a persistent snapshot keyed to the learner's local calendar day and refreshed when its content versions become obsolete. Only evidence timestamped after plan creation completes a step. Activity days are informational; missed days remove no progress. The incident notebook records observations, hypotheses, changes and verification reasoning separately from executable check results.
+
+Progress v3 adds bounded incident records, note timestamps, daily plans and architecture drafts; v1/v2 attempts retain their original versioned evidence. Architecture graphs have seven known node roles, a whitelist of directed connections, bounded coordinates, and no executable input. Import rejects invalid graph records while retaining valid older progress. Saved experiments include the graph, normalized configuration, baseline and model version.
+
+The foreground model uses the connected request path and cache route. Background jobs are modeled separately, with constant arrivals, finite buffering, fixed worker capacity and lower priority for shared database operations. The model conserves initial backlog plus arrivals as processed, retained or rejected jobs. Canvas coordinates do not influence performance. See `src/lib/architecture.mjs` and the model assumptions visible in Design Lab.

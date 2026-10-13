@@ -2,7 +2,7 @@
 
 A local-first platform engineering learning environment. Learn by investigating failures, writing code, checking results and explaining tradeoffs.
 
-**v0.2: Practice that travels** — twenty original missions, a browser Python runtime, a design experiment, interview practice and a portable engineering notebook. No account or LLM required.
+**v0.2.1: Guided practice** — twenty original missions, a browser Python runtime, an editable architecture lab, daily practice plans, interview practice and a portable engineering notebook. No account or LLM required.
 
 ## What works today
 
@@ -12,7 +12,7 @@ A local-first platform engineering learning environment. Learn by investigating 
 | Linux terminal and shell/cron teaching models | Yes | Yes | None |
 | Real Python execution | Browser worker | Browser worker | Docker runner also available |
 | Concept review, versioned progress, notes and JSON import/export | Browser storage | Browser storage | None |
-| Capacity/failure experiment and saved rationale | Yes | Yes | None |
+| Editable architecture, queue/failure scenarios and saved rationale | Yes | Yes | None |
 | Interview prompts, timer and self-review | Yes | Yes | None |
 | Contextual AI mentor | Via your own gateway | Via gateway | Reachable compatible local/remote model |
 | Isolated Docker Python and Bash | Via your own gateway | Opt-in labs profile | Dedicated lab Docker daemon |
@@ -98,6 +98,12 @@ npm run test:e2e
 See [validation details](docs/TESTING.md), [architecture and trust boundaries](docs/ARCHITECTURE.md), and the [release roadmap](docs/ROADMAP.md). GitHub Actions additionally builds Compose and exercises the real Docker runner on a disposable CI host.
 
 Mission content lives in `src/data/missions.json`. Each mission includes a briefing, objective, three hints, explanation question, practice checks and a worked solution. These checks support self-study, not certification or anti-cheat enforcement. AI feedback is advisory, and the design simulator explicitly uses illustrative equations rather than measured production benchmarks.
+
+## Guided practice and architecture experiments
+
+Home creates a daily 15-, 30- or 60-minute plan from due concepts and available missions. Saved evidence completes the steps. Mission workspaces have Files, Checks and History tabs plus an Observe → Repair → Verify → Explain notebook; direct mission links survive reloads. Portfolio can export the reasoning as Markdown.
+
+Design Lab lets you move components, edit supported connections, add a queue/worker path, pin a baseline and run five failure scenarios. Connections affect results; positions are visual only. Drafts persist, and saved experiments reopen from Portfolio. Read the [guided-practice guide and model limits](docs/GUIDED_PRACTICE.md).
 
 ## Author and review lessons
 

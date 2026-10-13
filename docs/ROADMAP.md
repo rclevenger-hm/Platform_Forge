@@ -27,9 +27,20 @@ This foundation is a usable starting point, not the complete senior platform eng
 1. Review accessibility with keyboard and screen-reader users, including reduced motion and contrast.
 2. Expand model compatibility adapters and evaluate grounded hints, hallucinated commands and prompt injection.
 3. Pilot the learning sequence with practitioners; calibrate review cadence and transfer difficulty.
-4. Move the visual design closer to the original concept: a daily learning plan, richer lab workspace and editable architecture canvas. See [visual review](VISUAL_REVIEW.md).
+4. Continue visual refinement with a richer campaign path, service components and practitioner-reviewed scenarios. See [visual review](VISUAL_REVIEW.md).
 
 The curriculum authoring and migration gates are implemented. Practitioner, accessibility and model evaluation gates remain open.
+
+## Shipped in v0.2.1: guided practice
+
+- Time-budgeted daily plans, local-day activity, and completion based on saved evidence.
+- Observe/Repair/Verify/Explain stages; a persistent incident notebook, Files/Checks/History tabs, shareable mission URLs and Markdown journal export.
+- Editable architecture components and supported connections, operable by pointer or keyboard.
+- Connection-aware request capacity, finite background queues, worker outages and shared database contention.
+- Pinned baseline comparisons, five failure scenarios, persistent drafts and reopened portfolio experiments.
+- Progress schema v3 automatically migrates v1/v2 backups and validates graph/journal data.
+
+The canvas supports a bounded set of component roles and paths. The simulations remain explicit teaching models; they do not run infrastructure or predict real performance. Real VM labs remain the next runtime milestone.
 
 ## Release 0.3: real Linux incident labs (3–5 engineer-weeks)
 

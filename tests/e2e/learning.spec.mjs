@@ -131,7 +131,7 @@ test('legacy progress migrates into concept reviews and authoring rejects broken
   await expect(page.getByText('Independent practice; transfer unverified')).toBeVisible();
   await page.getByRole('button', {name:'Try the transfer'}).click();
   await expect(page.getByRole('heading', {name:'Count the broken deployments'})).toBeVisible();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('platform-forge:v1')).version)).toBe(2);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('platform-forge:v1')).version)).toBe(3);
   await page.getByRole('button', {name:'Author', exact:true}).click();
   await expect(page.getByText('VALID MISSION CONTRACT', {exact:true})).toBeVisible();
   await page.getByLabel('Mission JSON').fill('{"id":"NEW"}');
@@ -161,4 +161,79 @@ test('Bash execution is offered only by a capable runner and standalone checks s
   await page.getByLabel('Execution engine').selectOption('browser');
   await page.getByRole('button', {name:'Run checks & submit'}).click();
   await expect(page.getByText('Mission complete. Nice work.')).toBeVisible();
+});
+
+test('daily plan tracks work and mission links preserve the staged notebook', async ({ page }) => {
+  await page.goto('./');
+  await page.getByLabel('Daily time budget').selectOption('15');
+  await expect(page.getByLabel("Today's practice plan")).toContainText('0 / 2 steps complete');
+  await page.getByRole('button', {name:'Continue your journey'}).click();
+  await page.getByLabel('Incident observation').fill('The handoff points to the relay log.');
+  await page.getByLabel('Incident hypothesis').fill('The log should explain why the worker stopped.');
+  await page.getByRole('tab', {name:'Files',exact:true}).click();
+  await page.getByRole('button', {name:'/home/learner/handoff.txt',exact:true}).click();
+  await page.getByRole('button', {name:'/var/log/relay.log',exact:true}).click();
+  await page.getByRole('radio', {name:'It starts with /',exact:true}).check();
+  await page.getByRole('button', {name:'Run checks & submit'}).click();
+  await expect(page.getByText('Mission complete. Nice work.')).toBeVisible();
+  await page.getByLabel('Mission notes').fill('Read the handoff and confirmed the failure evidence.');
+  await page.getByRole('button', {name:'Home',exact:true}).click();
+  await expect(page.getByLabel("Today's practice plan")).toContainText('2 / 2 steps complete');
+  await page.goto('./#Practice%2FM12');
+  await page.getByLabel('Incident observation').fill('Cron cannot resolve the relative executable.');
+  await page.reload();
+  await expect(page.getByRole('heading', {name:'The midnight backup'})).toBeVisible();
+  await expect(page.getByLabel('Incident observation')).toHaveValue('Cron cannot resolve the relative executable.');
+  await page.getByRole('tab', {name:'Workspace',exact:true}).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', {name:'Files',exact:true})).toBeFocused();
+  await page.getByRole('button', {name:'Portfolio',exact:true}).click();
+  const download=page.waitForEvent('download');
+  await page.getByRole('button', {name:'Export incident journal'}).click();
+  expect((await download).suggestedFilename()).toBe('platform-forge-journal.md');
+});
+
+test('editable architecture affects results and survives saving, reload and reopening', async ({ page }) => {
+  await page.goto('./#Design%20Lab');
+  await page.getByRole('button', {name:'Cache node',exact:true}).click();
+  await page.getByRole('button', {name:'Remove Cache',exact:true}).click();
+  await expect(page.getByText('OVER CAPACITY',{exact:true})).toBeVisible();
+  await page.getByRole('button', {name:'Cache',exact:true}).click();
+  await page.getByLabel('Architecture connection').selectOption('api:cache');
+  await page.getByRole('button', {name:'Connect components'}).click();
+  await page.getByLabel('Architecture connection').selectOption('cache:database');
+  await page.getByRole('button', {name:'Connect components'}).click();
+  await expect(page.getByText('WITHIN CAPACITY',{exact:true})).toBeVisible();
+  await page.getByRole('button', {name:'API service node',exact:true}).focus();
+  await page.keyboard.press('ArrowRight');
+  const moved=await page.getByRole('button', {name:'API service node',exact:true}).getAttribute('style');
+  await page.getByRole('button', {name:'Add queue & worker path'}).click();
+  await page.getByRole('button', {name:'Pin baseline',exact:true}).click();
+  await page.getByLabel('Stop all workers',exact:true).check();
+  await expect(page.getByText('The remaining jobs cannot drain under these conditions.',{exact:false})).toBeVisible();
+  await page.getByRole('button', {name:'Run scenario suite'}).click();
+  await expect(page.getByRole('rowheader', {name:'Workers stopped',exact:true})).toBeVisible();
+  await page.getByLabel('Design rationale').fill('The finite buffer limits memory, but a stopped worker causes rejected jobs.');
+  await page.getByRole('button', {name:'Save experiment',exact:true}).click();
+  await page.reload();
+  await expect(page.getByLabel('Stop all workers',exact:true)).toBeChecked();
+  expect(await page.getByRole('button', {name:'API service node',exact:true}).getAttribute('style')).toBe(moved);
+  await page.getByRole('button', {name:'Portfolio',exact:true}).click();
+  await page.getByRole('button', {name:'Reopen design',exact:true}).click();
+  await expect(page.getByLabel('Design rationale')).toHaveValue('The finite buffer limits memory, but a stopped worker causes rejected jobs.');
+  await expect(page.getByRole('heading', {name:'Baseline → current design'})).toBeVisible();
+});
+
+test('daily plan and architecture remain usable on a narrow viewport', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('./');
+  await page.getByLabel('Daily time budget').selectOption('15');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  await page.goto('./#Design%20Lab');
+  await page.getByRole('button', {name:'Add queue & worker path'}).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  await page.getByRole('button', {name:'Worker node',exact:true}).focus();
+  await page.keyboard.press('ArrowLeft');
+  await page.getByRole('button', {name:'Run scenario suite'}).click();
+  await expect(page.getByRole('rowheader', {name:'Cold cache',exact:true})).toBeVisible();
 });
