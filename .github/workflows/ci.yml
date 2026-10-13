@@ -47,6 +47,8 @@ jobs:
         run: |
           curl --fail http://127.0.0.1:8080/ | grep -q 'Platform Forge'
           curl --fail http://127.0.0.1:8080/api/health
+      - name: Verify persistent individual accounts
+        run: python3 scripts/check_accounts.py
       - name: Exercise isolated runner on disposable CI host
         run: |
           docker pull python:3.13-alpine

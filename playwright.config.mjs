@@ -12,12 +12,12 @@ export default defineConfig({
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
       : {},
   },
-  webServer: {
+  webServer: [{
     command:
       "BASE_PATH=/Platform_Forge/ npm run build && BASE_PATH=/Platform_Forge/ npm run preview -- --port 4173",
     url: "http://127.0.0.1:4173/Platform_Forge/",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
-  },
+  }, {command:"python3 tests/e2e/start-api.py",url:"http://127.0.0.1:8789/api/health",reuseExistingServer:false,timeout:15000}],
   reporter: "list",
 });

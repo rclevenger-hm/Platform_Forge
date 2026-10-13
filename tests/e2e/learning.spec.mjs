@@ -131,7 +131,7 @@ test('legacy progress migrates into concept reviews and authoring rejects broken
   await expect(page.getByText('Independent practice; transfer unverified')).toBeVisible();
   await page.getByRole('button', {name:'Try the transfer'}).click();
   await expect(page.getByRole('heading', {name:'Count the broken deployments'})).toBeVisible();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('platform-forge:v1')).version)).toBe(3);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('platform-forge:v1')).version)).toBe(4);
   await page.getByRole('button', {name:'Author', exact:true}).click();
   await expect(page.getByText('VALID MISSION CONTRACT', {exact:true})).toBeVisible();
   await page.getByLabel('Mission JSON').fill('{"id":"NEW"}');
@@ -236,4 +236,40 @@ test('daily plan and architecture remain usable on a narrow viewport', async ({ 
   await page.keyboard.press('ArrowLeft');
   await page.getByRole('button', {name:'Run scenario suite'}).click();
   await expect(page.getByRole('rowheader', {name:'Cold cache',exact:true})).toBeVisible();
+});
+
+test('managed runs can be cancelled without a failed attempt and save completed execution evidence',async({page})=>{
+  await page.route('**/api/capabilities',route=>route.fulfill({json:{connected:true,tutor:false,runner:true,runnerLanguages:['python'],runnerJobs:true}}));
+  let current, finish=false;
+  await page.route('**/api/jobs',async route=>{
+    const body=route.request().postDataJSON();
+    current={id:body.jobId,missionId:'M07',missionVersion:1,state:'running',passed:false,output:'',cleanup:'pending',createdAt:new Date().toISOString(),startedAt:new Date().toISOString(),finishedAt:null,maxRunSeconds:10,events:[{at:new Date().toISOString(),event:'accepted'}],image:{reference:'python:test',id:'sha256:'+'a'.repeat(64),digests:[]}};
+    await route.fulfill({status:202,json:current});
+  });
+  await page.route('**/api/jobs/*',route=>{
+    if(finish) current={...current,state:'succeeded',passed:true,cleanup:'confirmed',finishedAt:new Date().toISOString(),output:'All practice checks passed.'};
+    return route.fulfill({json:current});
+  });
+  await page.route('**/api/jobs/*/cancel',route=>{
+    current={...current,state:'cancelled',passed:false,finishedAt:new Date().toISOString(),cleanup:'confirmed',output:'Run cancelled.'};
+    return route.fulfill({json:current});
+  });
+  await page.goto('./#Practice%2FM07');
+  const m=missions.find(m=>m.id==='M07');
+  await page.getByLabel('Execution engine').selectOption('docker');
+  await page.getByRole('radio',{name:m.quiz[m.answer+1],exact:true}).check();
+  await page.getByRole('button',{name:'Run checks & submit'}).click();
+  await page.getByRole('button',{name:'Cancel run',exact:true}).click();
+  await expect(page.getByText('Cancelled',{exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Run checks & submit'})).toBeEnabled();
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('platform-forge:v1')).attempts.length)).toBe(0);
+  finish=true;
+  await page.getByLabel('Code editor').fill(m.solution);
+  await page.getByRole('button',{name:'Run checks & submit'}).click();
+  await expect(page.getByText('Mission complete. Nice work.')).toBeVisible();
+  await page.getByRole('button',{name:'Portfolio',exact:true}).click();
+  await expect(page.getByText('Cancelled',{exact:true})).toBeVisible();
+  await expect(page.getByText('Checks passed',{exact:true})).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('Checks passed',{exact:true})).toBeVisible();
 });

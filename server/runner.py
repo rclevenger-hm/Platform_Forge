@@ -205,6 +205,9 @@ def maintenance():
         for job_id in reap_expired():
             JOBS.cleaned(job_id)
             print(json.dumps({'event': 'expired_container_removed', 'jobId': job_id}), flush=True)
+        for job_id in JOBS.pending_cleanup():
+            if remove_container('forge-' + job_id):
+                JOBS.cleaned(job_id)
         JOBS.sweep()
         time.sleep(5)
 

@@ -112,6 +112,11 @@ class JobManager:
                 self.event(job, 'cancel_requested')
             return copy.deepcopy(job['record'])
 
+    def pending_cleanup(self):
+        with self.lock:
+            return [key for key, job in self.jobs.items() if job['finished'] is not None
+                    and time.monotonic() - job['finished'] >= 5 and job['record']['cleanup'] == 'pending']
+
     def cleaned(self, job_id):
         with self.lock:
             job = self.jobs.get(job_id)

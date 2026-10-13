@@ -40,6 +40,22 @@ export async function captureReview(page, missions) {
   await page.goto('./#Review'); await page.reload();
   await page.getByRole('heading', {name:'Make the idea stick.'}).waitFor();
   await capture('review');
+  // This account belongs to the disposable test backend, never a real learner.
+  await page.goto('./#Settings');
+  await page.getByLabel('Platform Forge backend URL').fill('http://127.0.0.1:8789');
+  await page.getByRole('button',{name:'Check connection'}).click();
+  await page.getByText('Backend connected. Sign in from Account to save your progress.').waitFor();
+  await page.getByRole('button',{name:'Account',exact:true}).click();
+  await page.getByRole('textbox',{name:'Username',exact:true}).waitFor();
+  await capture('account-login');
+  await page.getByRole('button',{name:'Create account',exact:true}).click();
+  await page.getByRole('textbox',{name:'Username',exact:true}).fill('visual_' + Date.now());
+  await page.getByLabel('Password',{exact:true}).fill('Disposable visual review password');
+  await page.getByRole('button',{name:'Create my account'}).click();
+  await page.getByRole('heading',{name:/Welcome, visual_/}).waitFor();
+  await page.getByRole('button',{name:'Import guest progress'}).click();
+  await page.getByText('Progress saved',{exact:true}).waitFor();
+  await capture('account');
   const notes = {
     home:['A daily practice plan, recorded progress and campaign continuation are implemented.','The richer campaign path and isometric illustration remain design targets.'],
     mission:['Staged practice, Files/Checks/History tabs and a persistent incident notebook are implemented.','Real Linux VM incident environments and deeper lab lifecycle management remain later milestones.'],
@@ -48,7 +64,7 @@ export async function captureReview(page, missions) {
   for (const name of ['home','mission','design']) {
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Platform Forge · ${name} comparison</title><style>
       *{box-sizing:border-box}body{margin:0;padding:46px;background:#0a141d;color:#e7f0f4;font-family:Arial,sans-serif}h1{font-size:34px;margin:12px 0 8px}header p{color:#a9beca;font-size:19px}small{font-size:14px;letter-spacing:2px;color:#c2f36b}.pair{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:28px}figure{margin:0;background:#112330;border:1px solid #284350;border-radius:14px;overflow:hidden}figcaption{padding:20px;font-weight:bold;font-size:22px}img{width:100%;display:block}.note{font-size:19px;line-height:1.5;padding:0 20px 22px;color:#bbccd5}footer{font-size:16px;color:#8fa5b2;margin-top:25px}
-      </style></head><body><header><small>PLATFORM FORGE / v0.2.1 VISUAL REVIEW</small><h1>${name === 'home' ? 'Home: the learning journey' : name === 'mission' ? 'Practice: from briefing to evidence' : 'Design Lab: reason about a system'}</h1><p>Original design intent alongside the working standalone product.</p></header><div class="pair"><figure><figcaption>EXPECTED · Original AI-generated concept</figcaption><img src="${await dataUrl(`docs/design-concepts/${name}.png`)}"><p class="note">${notes[name][1]}</p></figure><figure><figcaption>IMPLEMENTED · Actual browser screenshot</figcaption><img src="${await dataUrl(`${folder}/${name}.png`)}"><p class="note">${notes[name][0]}</p></figure></div><footer>Actual capture: 1440 × 1000 CSS pixels · no LLM connected · capture source: production build in GitHub Actions</footer></body></html>`;
+      </style></head><body><header><small>PLATFORM FORGE / v0.2.2 VISUAL REVIEW</small><h1>${name === 'home' ? 'Home: the learning journey' : name === 'mission' ? 'Practice: from briefing to evidence' : 'Design Lab: reason about a system'}</h1><p>Original design intent alongside the working standalone product.</p></header><div class="pair"><figure><figcaption>EXPECTED · Original AI-generated concept</figcaption><img src="${await dataUrl(`docs/design-concepts/${name}.png`)}"><p class="note">${notes[name][1]}</p></figure><figure><figcaption>IMPLEMENTED · Actual browser screenshot</figcaption><img src="${await dataUrl(`${folder}/${name}.png`)}"><p class="note">${notes[name][0]}</p></figure></div><footer>Actual capture: 1440 × 1000 CSS pixels · no LLM connected · capture source: production build in GitHub Actions</footer></body></html>`;
     await writeFile(`${folder}/comparison-${name}.html`,html);
     await page.setViewportSize({width:2400,height:1300});
     await page.setContent(html);

@@ -22,3 +22,38 @@ for mission in MISSIONS.values():
         bad = execute(mission['id'], mission['starter'])
         assert not bad['passed'], (mission['id'], bad)
 print('All Bash solutions pass; broken argument and pipeline starters fail.')
+
+import subprocess
+import time
+import uuid
+from runner import docker_args, reap_expired, RUNNER_ID
+from jobs import JobManager, BusyError, TERMINAL
+
+manager = JobManager(execute)
+job = manager.submit(MISSIONS['M07'], 'while True: pass')
+for _ in range(30):
+    if manager.get(job['id'])['state'] == 'running':
+        break
+    time.sleep(.1)
+manager.cancel(job['id'])
+for _ in range(100):
+    cancelled = manager.get(job['id'])
+    if cancelled['state'] in TERMINAL:
+        break
+    time.sleep(.1)
+assert cancelled['state'] == 'cancelled' and not cancelled['passed'], cancelled
+assert cancelled['cleanup'] == 'confirmed', cancelled
+left = subprocess.run(['docker', 'ps', '-aq', '--filter', 'name=forge-' + job['id']], capture_output=True, text=True, check=True)
+assert not left.stdout.strip(), left.stdout
+assert good['image']['id'].startswith('sha256:'), good
+# A process lost during a runner crash leaves only labels for a new process to inspect.
+orphan_id = uuid.uuid4().hex
+args = docker_args('forge-' + orphan_id, expires=int(time.time()) - 1)
+args.remove('-i'); args.insert(2, '-d')
+args[-1:] = ['-c', 'import time; time.sleep(120)']
+try:
+    subprocess.run(args, capture_output=True, check=True, timeout=10)
+    assert orphan_id in reap_expired(), 'Expired orphan was not removed'
+finally:
+    subprocess.run(['docker', 'rm', '-f', 'forge-' + orphan_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+print('Managed cancellation, immutable image identity and restart-style orphan cleanup passed.')
