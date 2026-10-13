@@ -31,10 +31,13 @@ from jobs import JobManager, BusyError, TERMINAL
 
 manager = JobManager(execute)
 job = manager.submit(MISSIONS['M07'], 'while True: pass')
-for _ in range(30):
-    if manager.get(job['id'])['state'] == 'running':
+for _ in range(50):
+    live = subprocess.run(['docker', 'inspect', '--format', '{{.State.Running}}', 'forge-' + job['id']], capture_output=True, text=True, timeout=2)
+    if live.returncode == 0 and live.stdout.strip() == 'true':
         break
     time.sleep(.1)
+else:
+    raise AssertionError('The cancellation test never reached an executing container')
 manager.cancel(job['id'])
 for _ in range(100):
     cancelled = manager.get(job['id'])
