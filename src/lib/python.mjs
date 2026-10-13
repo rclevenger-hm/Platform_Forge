@@ -5,6 +5,7 @@ export function runPython(code, tests, { onWorker, timeout = 60000 } = {}) {
         "python-worker.js",
         new URL(import.meta.env.BASE_URL, location.origin),
       ),
+      { type: "module" },
     );
     onWorker?.(worker);
     const timer = setTimeout(() => {

@@ -2,7 +2,7 @@ let runtime;
 self.onmessage = async ({ data }) => {
   try {
     if (!runtime) {
-      importScripts(`${data.indexURL}pyodide.js`);
+      const { loadPyodide } = await import(`${data.indexURL}pyodide.mjs`);
       runtime = await loadPyodide({ indexURL: data.indexURL });
     }
     let output = "";
