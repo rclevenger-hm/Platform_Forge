@@ -1,0 +1,86 @@
+[
+  {
+    "id": "linux",
+    "title": "Linux foundations",
+    "description": "Files, permissions, processes and storage",
+    "icon": "Terminal"
+  },
+  {
+    "id": "shell",
+    "title": "Shell and scheduled jobs",
+    "description": "Quoting, exit status, cron and safe automation",
+    "icon": "Terminal"
+  },
+  {
+    "id": "python",
+    "title": "Python engineering",
+    "description": "Data structures, tested tools and resilient clients",
+    "icon": "Code"
+  },
+  {
+    "id": "algorithms",
+    "title": "Algorithms and complexity",
+    "description": "Maps, heaps, sorting and problem decomposition",
+    "icon": "Code"
+  },
+  {
+    "id": "delivery",
+    "title": "Git and delivery",
+    "description": "Review, tests, artifacts and release checks",
+    "icon": "GitBranch"
+  },
+  {
+    "id": "networking",
+    "title": "Networking and HTTP",
+    "description": "DNS, TCP, TLS and request tracing",
+    "icon": "Network"
+  },
+  {
+    "id": "containers",
+    "title": "Containers",
+    "description": "Images, networks, resources and Compose",
+    "icon": "Boxes"
+  },
+  {
+    "id": "infrastructure",
+    "title": "Infrastructure as code",
+    "description": "OpenTofu, state, IAM and configuration",
+    "icon": "Layers"
+  },
+  {
+    "id": "kubernetes",
+    "title": "Kubernetes",
+    "description": "Workloads, rollouts, probes and cluster operations",
+    "icon": "Boxes"
+  },
+  {
+    "id": "reliability",
+    "title": "Reliability engineering",
+    "description": "SLOs, incidents, restore and observability",
+    "icon": "Activity"
+  },
+  {
+    "id": "distributed",
+    "title": "Data and distributed systems",
+    "description": "Queues, consistency, caches and idempotency",
+    "icon": "Database"
+  },
+  {
+    "id": "platform",
+    "title": "Platform product",
+    "description": "Golden paths, self-service and developer experience",
+    "icon": "Waypoints"
+  },
+  {
+    "id": "design",
+    "title": "System design",
+    "description": "Capacity, failure modes and cost tradeoffs",
+    "icon": "Network"
+  },
+  {
+    "id": "leadership",
+    "title": "Engineering judgment",
+    "description": "Design reviews, communication and migrations",
+    "icon": "Users"
+  }
+]
