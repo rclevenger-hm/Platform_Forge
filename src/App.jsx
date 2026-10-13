@@ -35,14 +35,20 @@ function route() {
   try {
     const value = decodeURIComponent(location.hash.slice(1));
     return nav.some(([n]) => n === value) ? value : "Home";
-  } catch { return "Home"; }
+  } catch {
+    return "Home";
+  }
 }
 export default function App() {
   const [page, setPage] = useState(route),
     [missionId, setMissionId] = useState("M01"),
     [mobile, setMobile] = useState(false),
     [progress, setProgress] = useState(() => {
-      try { return readProgress(localStorage); } catch { return fresh(); }
+      try {
+        return readProgress(localStorage);
+      } catch {
+        return fresh();
+      }
     }),
     [storageError, setStorageError] = useState(""),
     [settings, setSettings] = useState({ url: "", token: "" }),
@@ -97,7 +103,14 @@ export default function App() {
   };
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#main-content">
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("main-content").focus();
+        }}
+      >
         Skip to content
       </a>
       <button
@@ -166,7 +179,7 @@ export default function App() {
               : "AI optional · standalone mode"}
           </button>
         </header>
-        <main id="main-content">
+        <main id="main-content" tabIndex={-1}>
           {storageError && (
             <div className="warning" role="alert">
               {storageError}

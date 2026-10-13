@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 const missions = JSON.parse(
   readFileSync(new URL("../../src/data/missions.json", import.meta.url)),
 );
@@ -84,4 +85,53 @@ test("mobile navigation and layout fit a narrow viewport", async ({ page }) => {
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+});
+test("reachable mentor enables contextual hints and an outage leaves authored hints available", async ({
+  page,
+}) => {
+  await page.route("**/api/capabilities", (route) =>
+    route.fulfill({ json: { connected: true, tutor: true, runner: false } }),
+  );
+  await page.route("**/api/tutor", (route) =>
+    route.fulfill({ json: { answer: "Which directory does pwd show?" } }),
+  );
+  await page.goto("./");
+  await expect(
+    page.getByRole("button", { name: "AI mentor connected" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Continue your journey" }).click();
+  await page.getByLabel("Ask the mentor").fill("Give me a small hint.");
+  await page.getByRole("button", { name: "Ask for a hint" }).click();
+  await expect(page.getByText("Which directory does pwd show?")).toBeVisible();
+  await page.route("**/api/tutor", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { error: "Optional service unavailable." },
+    }),
+  );
+  await page.getByRole("button", { name: "Ask for a hint" }).click();
+  await expect(page.getByText("Optional service unavailable.")).toBeVisible();
+  await page.getByRole("button", { name: /Reveal a hint/ }).click();
+  await expect(page.getByText("Start with pwd and ls.")).toBeVisible();
+});
+test("capture the implemented workspace for visual review", async ({
+  page,
+}) => {
+  await mkdir("test-results/previews", { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  await page.goto("./");
+  await page.screenshot({
+    path: "test-results/previews/home.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Continue your journey" }).click();
+  await page.screenshot({
+    path: "test-results/previews/mission.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Design Lab", exact: true }).click();
+  await page.screenshot({
+    path: "test-results/previews/design.png",
+    fullPage: true,
+  });
 });
