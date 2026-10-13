@@ -3,20 +3,24 @@ const folder = 'test-results/previews';
 const dataUrl = async path => `data:image/png;base64,${(await readFile(path)).toString('base64')}`;
 export async function captureReview(page, missions) {
   await mkdir(folder, {recursive:true});
+  async function capture(name, fullPage = false) {
+    await page.mouse.move(1430, 1);
+    await page.screenshot({path: `${folder}/${name}.png`, fullPage, animations: 'disabled'});
+  }
   await page.setViewportSize({width:1440,height:1000});
   await page.goto('./');
   await page.getByRole('heading', {name:/Build confidence/}).waitFor();
-  await page.screenshot({path:`${folder}/home.png`});
-  await page.screenshot({path:`${folder}/home-full.png`,fullPage:true});
+  await capture('home');
+  await capture('home-full', true);
   await page.getByRole('button', {name:'Campaign',exact:true}).click();
   await page.getByRole('button', {name:/M12 The midnight backup/}).click();
-  await page.screenshot({path:`${folder}/mission.png`});
-  await page.screenshot({path:`${folder}/mission-full.png`,fullPage:true});
+  await capture('mission');
+  await capture('mission-full', true);
   await page.getByRole('button', {name:'Design Lab',exact:true}).click();
-  await page.screenshot({path:`${folder}/design.png`});
-  await page.screenshot({path:`${folder}/design-full.png`,fullPage:true});
+  await capture('design');
+  await capture('design-full', true);
   await page.getByRole('button', {name:'Author',exact:true}).click();
-  await page.screenshot({path:`${folder}/author.png`});
+  await capture('author');
   const fixture = ['M07','M16','M06','M09'].map((id,i) => {
     const m = missions.find(x => x.id === id);
     return {id:`visual-fixture-${i}`,missionId:id,missionVersion:m.version,concepts:m.concepts,passed:true,hints:id === 'M06' ? 1 : 0,mode:m.kind === 'python' ? 'browser Python' : 'browser simulation',at:`2026-01-0${i+1}T00:00:00Z`};
@@ -27,7 +31,7 @@ export async function captureReview(page, missions) {
   },fixture);
   await page.goto('./#Review'); await page.reload();
   await page.getByRole('heading', {name:'Make the idea stick.'}).waitFor();
-  await page.screenshot({path:`${folder}/review.png`});
+  await capture('review');
   const notes = {
     home:['Campaign, navigation, lime actions and Relay service map are implemented.','The daily-plan rail and richer campaign illustration remain design targets.'],
     mission:['Authored briefing, editable exercise, hints, explanation and evidence are implemented.','The concept’s tabbed incident console and full Linux lab lifecycle are later milestones.'],
