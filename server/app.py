@@ -59,6 +59,8 @@ def capabilities():
         try:
             health = upstream(endpoint(setting('RUNNER_URL'), 'health'), token=setting('RUNNER_TOKEN'), timeout=3)
             result['runner'] = health.get('ready') is True
+            offered = health.get('languages', ['python'])
+            result['runnerLanguages'] = [x for x in ('python', 'bash') if isinstance(offered, list) and x in offered] if result['runner'] else []
         except Exception:
             pass
     return result
@@ -96,10 +98,10 @@ def tutor(body):
 def run(body):
     mission = MISSIONS.get(body.get('missionId'))
     code = body.get('code')
-    if not mission or mission['kind'] != 'python' or not isinstance(code, str) or len(code) > 24000:
-        raise ValueError('Choose a Python mission and provide at most 24,000 characters of code.')
+    if not mission or not (mission['kind'] == 'python' or mission.get('runtime') == 'bash') or not isinstance(code, str) or len(code) > 24000:
+        raise ValueError('Choose an executable mission and provide at most 24,000 characters of code.')
     if not setting('RUNNER_URL') or not setting('RUNNER_TOKEN'):
-        raise ValueError('Docker runner is not configured. Use browser Python.')
+        raise ValueError('Docker runner is not configured. Use the standalone practice mode.')
     reply = upstream(endpoint(setting('RUNNER_URL'), 'run'), {'missionId': mission['id'], 'code': code}, token=setting('RUNNER_TOKEN'), timeout=20)
     if not isinstance(reply.get('passed'), bool) or not isinstance(reply.get('output'), str):
         raise ValueError('Invalid runner response.')
@@ -107,7 +109,7 @@ def run(body):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = 'PlatformForge/0.1'
+    server_version = 'PlatformForge/0.2'
 
     def log_message(self, fmt, *args):
         # Do not log body, token, URL parameters, or provider responses.

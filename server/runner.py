@@ -1,4 +1,4 @@
-"""Opt-in Docker Python runner. Run only on a dedicated lab Docker daemon."""
+"""Opt-in Docker Python and Bash runner. Run only on a dedicated lab Docker daemon."""
 import hmac
 import json
 import os
@@ -12,30 +12,71 @@ from pathlib import Path
 
 MISSIONS = {m['id']: m for m in json.loads((Path(__file__).resolve().parent.parent / 'src/data/missions.json').read_text())}
 IMAGE = os.environ.get('LAB_IMAGE', 'python:3.13-alpine')
+BASH_IMAGE = os.environ.get('BASH_LAB_IMAGE', 'platform-forge-bash:0.2')
 TOKEN = os.environ.get('RUNNER_TOKEN', '')
 SLOTS = threading.BoundedSemaphore(2)
 
 
-def docker_args(name):
+def docker_args(name, image=None):
     return ['docker', 'run', '--rm', '--name', name, '--label', 'platform-forge.lab=true',
             '--pull=never', '--network=none', '--read-only', '--cap-drop=ALL',
             '--security-opt=no-new-privileges', '--user=65534:65534', '--memory=128m',
             '--memory-swap=128m', '--cpus=0.5', '--pids-limit=32',
-            '--tmpfs=/tmp:rw,noexec,nosuid,size=16m', '-i', IMAGE, 'python', '-I', '-B', '-u', '-']
+            '--tmpfs=/tmp:rw,noexec,nosuid,size=16m', '-i', image or IMAGE, 'python', '-I', '-B', '-u', '-']
+
+
+def bash_program(code, cases):
+    # Only repository-authored cases reach this function; uploaded previews never run.
+    # Learner source is a string literal, never interpolated into Python syntax.
+    payload = json.dumps({'code': code, 'cases': cases})
+    return "import json, os, subprocess, tempfile\ndata = json.loads(" + repr(payload) + ")\n" + r"""
+for case in data['cases']:
+    with tempfile.TemporaryDirectory(dir='/tmp') as directory:
+        script = os.path.join(directory, 'solution.sh')
+        with open(script, 'w') as handle:
+            handle.write(data['code'])
+        # A real file makes unquoted wildcard expansion observable in the lab.
+        with open(os.path.join(directory, 'sentinel.txt'), 'w') as handle:
+            handle.write('fixture')
+        with tempfile.TemporaryFile() as output:
+            child = subprocess.run(['bash', '--noprofile', '--norc', script, *case['args']],
+                input=case['stdin'].encode(), stdout=output, stderr=subprocess.STDOUT,
+                cwd=directory, env={'PATH': '/usr/local/bin:/usr/bin:/bin', 'HOME': directory, 'LANG': 'C.UTF-8'}, timeout=2)
+            output.seek(0)
+            actual = output.read(16001)
+        assert len(actual) <= 16000, case['label'] + ': output exceeded 16 KB'
+        assert child.returncode == case['exit'], case['label'] + ': unexpected exit status ' + str(child.returncode)
+        assert actual.decode(errors='replace') == case['stdout'], case['label'] + ': output did not match argument boundaries or expected text'
+        print('PASS: ' + case['label'])
+print('All practice checks passed.')
+"""
+
+
+def available_languages():
+    languages = []
+    for language, image in [('python', IMAGE), ('bash', BASH_IMAGE)]:
+        try:
+            result = subprocess.run(['docker', 'image', 'inspect', image], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1)
+            if result.returncode == 0:
+                languages.append(language)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    return languages
 
 
 def execute(mission_id, code):
     mission = MISSIONS.get(mission_id)
-    if not mission or mission['kind'] != 'python' or not isinstance(code, str) or len(code) > 24000:
-        raise ValueError('Invalid Python mission or code length.')
+    if not mission or not (mission['kind'] == 'python' or mission.get('runtime') == 'bash') or not isinstance(code, str) or len(code) > 24000:
+        raise ValueError('Invalid executable mission or code length.')
     name = 'forge-' + uuid.uuid4().hex
     # Authored checks, not a high-stakes judge: the learner can inspect or subvert these checks.
-    program = code + '\n\n' + mission['tests'] + '\nprint("All practice checks passed.")\n'
+    is_bash = mission.get('runtime') == 'bash'
+    program = bash_program(code, mission['cases']) if is_bash else code + '\n\n' + mission['tests'] + '\nprint("All practice checks passed.")\n'
     process = None
     output = bytearray()
     failure = ''
     try:
-        process = subprocess.Popen(docker_args(name), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = subprocess.Popen(docker_args(name, BASH_IMAGE if is_bash else IMAGE), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # Feed input on a separate thread so a stalled Docker daemon cannot block the deadline.
         def feed():
             try:
@@ -99,8 +140,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != '/health':
             return self.reply(404, {'error': 'Not found.'})
         try:
-            result = subprocess.run(['docker', 'image', 'inspect', IMAGE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
-            self.reply(200, {'ready': result.returncode == 0})
+            languages = available_languages()
+            self.reply(200, {'ready': bool(languages), 'languages': languages})
         except Exception:
             self.reply(503, {'ready': False})
 

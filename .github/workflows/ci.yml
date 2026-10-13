@@ -50,6 +50,7 @@ jobs:
       - name: Exercise isolated runner on disposable CI host
         run: |
           docker pull python:3.13-alpine
+          docker build --target bash-lab -t platform-forge-bash:0.2 .
           python3 scripts/check_runner.py
       - if: always()
         run: docker compose down --volumes

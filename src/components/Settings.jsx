@@ -33,7 +33,7 @@ export default function Settings({
       <h1>Choose how you learn.</h1>
       <p className="lede">
         The campaign needs no account, API key, or model. Add a backend when you
-        want AI coaching or isolated Docker Python.
+        want AI coaching or isolated Docker Python and Bash.
       </p>
       <div className="settings-grid">
         <section className="panel">
@@ -101,7 +101,8 @@ export default function Settings({
             ["Python in the browser", true],
             ["Design Lab & interview practice", true],
             ["Contextual AI mentor", capabilities.tutor],
-            ["Isolated Docker Python", capabilities.runner],
+            ["Isolated Docker Python", capabilities.runner && (capabilities.runnerLanguages || ["python"]).includes("python")],
+            ["Isolated Docker Bash", capabilities.runner && capabilities.runnerLanguages?.includes("bash")],
           ].map(([label, active]) => (
             <div className="capability" key={label}>
               <span className={`dot ${active ? "online" : ""}`} />

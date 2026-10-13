@@ -27,3 +27,8 @@ COPY src/data/missions.json src/data/missions.json
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 EXPOSE 8788
 CMD ["python", "server/runner.py"]
+
+# Optional execution image; build on the same dedicated daemon used by the runner.
+FROM python:3.13-alpine AS bash-lab
+RUN apk add --no-cache bash coreutils
+USER 65534:65534

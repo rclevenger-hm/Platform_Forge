@@ -72,6 +72,28 @@ class GatewayTests(unittest.TestCase):
         self.assertNotIn('--privileged', args)
         self.assertNotIn('-v', args)
 
+    def test_bash_runner_advertises_only_installed_images(self):
+        from types import SimpleNamespace
+        with patch.object(runner.subprocess, 'run', side_effect=[SimpleNamespace(returncode=1), SimpleNamespace(returncode=0)]):
+            self.assertEqual(runner.available_languages(), ['bash'])
+        args = runner.docker_args('forge-bash', runner.BASH_IMAGE)
+        self.assertIn(runner.BASH_IMAGE, args)
+        self.assertIn('--network=none', args)
+
+    def test_gateway_accepts_only_authored_bash_missions_and_forwards_language_capability(self):
+        with patch.dict(os.environ, {'RUNNER_URL': 'http://runner:8788', 'RUNNER_TOKEN': 'secret', 'LLM_BASE_URL': ''}), patch.object(app, 'upstream', return_value={'ready': True, 'languages': ['bash', 'unsupported']}):
+            self.assertEqual(app.capabilities()['runnerLanguages'], ['bash'])
+        with patch.dict(os.environ, {'RUNNER_URL': 'http://runner:8788', 'RUNNER_TOKEN': 'secret'}), patch.object(app, 'upstream', return_value={'passed': True, 'output': 'ok'}) as upstream:
+            app.run({'missionId': 'M20', 'code': 'echo example', 'tests': 'untrusted'})
+            self.assertNotIn('tests', upstream.call_args.args[1])
+            with self.assertRaises(ValueError):
+                app.run({'missionId': 'M12', 'code': 'cron is not an executable Bash mission'})
+
+    def test_bash_source_is_encoded_as_data_in_harness(self):
+        program = runner.bash_program("echo 'tricky'\n# \" ; import os", app.MISSIONS['M20']['cases'])
+        compile(program, '<bash-harness>', 'exec')
+        self.assertIn("subprocess.run(['bash'", program)
+
     def test_authored_python_solutions_pass_and_starters_fail(self):
         for mission in app.MISSIONS.values():
             if mission['kind'] != 'python':

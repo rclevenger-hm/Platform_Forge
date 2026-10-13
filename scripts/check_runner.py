@@ -14,3 +14,11 @@ assert not loop['passed'] and 'exceeded' in loop['output'], loop
 filesystem = execute('M07', "open('/forbidden.txt', 'w').write('blocked')")
 assert not filesystem['passed'] and ('Read-only' in filesystem['output'] or 'Permission' in filesystem['output']), filesystem
 print('Docker execution, failed solution, deadline and filesystem isolation checks passed.')
+
+for mission in MISSIONS.values():
+    if mission.get('runtime') == 'bash':
+        good = execute(mission['id'], mission['solution'])
+        assert good['passed'], (mission['id'], good)
+        bad = execute(mission['id'], mission['starter'])
+        assert not bad['passed'], (mission['id'], bad)
+print('All Bash solutions pass; broken argument and pipeline starters fail.')

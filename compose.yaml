@@ -44,6 +44,7 @@ services:
     environment:
       RUNNER_TOKEN: ${RUNNER_TOKEN:-}
       LAB_IMAGE: ${LAB_IMAGE:-python:3.13-alpine}
+      BASH_LAB_IMAGE: ${BASH_LAB_IMAGE:-platform-forge-bash:0.2}
     volumes:
       - ${LAB_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     security_opt: ["no-new-privileges:true"]
