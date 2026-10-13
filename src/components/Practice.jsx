@@ -12,12 +12,14 @@ import {
   terminalChecks,
   configChecks,
 } from "../lib/terminal.mjs";
-import { makeAttempt } from "../lib/progress.mjs";
+import { makeAttempt, prerequisitesMissing } from "../lib/progress.mjs";
 import { runPython } from "../lib/python.mjs";
 import { request } from "../lib/api.mjs";
 import Tutor from "./Tutor";
 export default function Practice({
   mission: m,
+  missions,
+  openMission,
   progress,
   setProgress,
   settings,
@@ -38,6 +40,8 @@ export default function Practice({
     [busy, setBusy] = useState(false),
     [result, setResult] = useState(null),
     [engine, setEngine] = useState("browser");
+  const language = m.runtime || m.kind;
+  const dockerReady = capabilities.runner && (capabilities.runnerLanguages || ["python"]).includes(language);
   const worker = useRef(null),
     mounted = useRef(true);
   useEffect(() => {
@@ -67,25 +71,21 @@ export default function Practice({
   async function check() {
     setBusy(true);
     setResult(null);
+    setChecks([]);
+    setOutput("");
     let list = [],
       out = "",
       mode = m.kind === "python" ? "browser Python" : "browser simulation";
     try {
-      if (m.kind === "terminal") list = terminalChecks(m, state);
+      if (engine === "docker" && dockerReady) {
+        const r = await request(settings, "run", { missionId: m.id, code });
+        list = [[`${language === "bash" ? "Bash" : "Python"} behavior checks`, r.passed]];
+        out = r.output; mode = "Docker lab";
+      } else if (m.kind === "terminal") list = terminalChecks(m, state);
       else if (m.kind === "config") list = configChecks(m, code);
       else {
-        const r =
-          engine === "docker" && capabilities.runner
-            ? await request(settings, "run", { missionId: m.id, code })
-            : await runPython(code, m.tests, {
-                onWorker: (w) => {
-                  worker.current = w;
-                },
-              });
-        mode =
-          engine === "docker" && capabilities.runner
-            ? "Docker lab"
-            : "browser Python";
+        const r = await runPython(code, m.tests, { onWorker: w => { worker.current = w; } });
+        mode = "browser Python";
         list = [["Python practice checks", r.passed]];
         out = r.output;
       }
@@ -97,7 +97,7 @@ export default function Practice({
       setResult(passed);
       setProgress((p) => ({
         ...p,
-        attempts: [...p.attempts, makeAttempt(m.id, passed, hints, mode)].slice(
+        attempts: [...p.attempts, makeAttempt(m, passed, hints, mode)].slice(
           -10000,
         ),
       }));
@@ -123,10 +123,16 @@ export default function Practice({
           <h1>{m.title}</h1>
         </div>
         <span className="tag lime">
-          {m.kind === "python" ? "Runnable Python" : "Browser simulation"}
+          {engine === "docker" && dockerReady ? `Docker ${language === "bash" ? "Bash" : "Python"}` : m.kind === "python" ? "Runnable Python" : "Browser simulation"}
         </span>
       </div>
       <p className="lede">{m.summary}</p>
+      {m.transferOf && <p className="transfer-note">Transfer exercise · Apply the idea from {m.transferOf} to a new problem.</p>}
+      {prerequisitesMissing(m, missions, progress).length > 0 && <div className="prerequisite-note">
+        <strong>Useful preparation</strong>
+        {prerequisitesMissing(m, missions, progress).map(pre => <button key={pre.id} className="text-button" onClick={() => openMission(pre.id)}>{pre.id} · {pre.title}</button>)}
+        <small>You can still explore this mission now.</small>
+      </div>}
       <div className="lab-layout">
         <div className="lesson-column">
           <section className="panel lesson">
@@ -181,14 +187,14 @@ export default function Practice({
               <span>
                 {m.kind === "terminal" ? "relay-sim" : m.path || "solution.py"}
               </span>
-              {m.kind === "python" && capabilities.runner && (
+              {dockerReady && (
                 <select
                   aria-label="Execution engine"
                   value={engine}
                   onChange={(e) => setEngine(e.target.value)}
                 >
-                  <option value="browser">Browser Python</option>
-                  <option value="docker">Docker Python</option>
+                  <option value="browser">{m.kind === "python" ? "Browser Python" : "Browser template checks"}</option>
+                  <option value="docker">Docker {language === "bash" ? "Bash" : "Python"}</option>
                 </select>
               )}
               <button
@@ -235,7 +241,7 @@ export default function Practice({
             <div className="workspace-footer">
               {m.kind === "python"
                 ? "Python runs in a disposable browser worker, or an isolated Docker container when connected."
-                : "A bounded teaching model. Commands and configuration checks do not execute on the host."}
+                : m.runtime === "bash" ? "Standalone mode checks the lesson template. Connect a Bash runner to execute behavior checks in Docker." : "A bounded teaching model. Commands and configuration checks do not execute on the host."}
             </div>
           </section>
           <section className="panel quiz">

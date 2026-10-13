@@ -1,0 +1,62 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { validateMission, validateCurriculum } from '../src/lib/curriculum.mjs';
+import { fresh, validateProgress, makeAttempt, status, conceptReviews, nextMission } from '../src/lib/progress.mjs';
+import { configChecks } from '../src/lib/terminal.mjs';
+const load = name => JSON.parse(readFileSync(new URL(`../src/data/${name}.json`, import.meta.url)));
+const missions = load('missions'), tracks = load('tracks');
+const get = id => missions.find(m => m.id === id);
+const at = (id, date, hints = 0, passed = true) => ({...makeAttempt(get(id), passed, hints, 'browser Python'), at: date + 'T00:00:00Z'});
+test('mission contracts reject unknown checks, broken references, cycles and invalid Bash cases', () => {
+  assert.deepEqual(validateCurriculum(missions, tracks), []);
+  const copied = structuredClone(missions);
+  copied[0].prerequisites = ['M02'];
+  assert.ok(validateCurriculum(copied, tracks).some(x => x.includes('cycle')));
+  copied[0].prerequisites = ['MISSING'];
+  assert.ok(validateCurriculum(copied, tracks).some(x => x.includes('invalid mission reference')));
+  const bash = structuredClone(get('M20'));
+  bash.checks[0].type = 'eval'; bash.cases[0].args = 'not an array';
+  assert.ok(validateMission(bash, tracks).length >= 2);
+  const variant = structuredClone(get('M16')); variant.concepts = ['permissions'];
+  assert.ok(validateCurriculum([...missions.filter(m => m.id !== variant.id), variant], tracks).some(x => x.includes('share a concept')));
+});
+test('data-driven checks support a new mission ID without changing the grader', () => {
+  const m = {...get('M20'), id: 'CUSTOM_21'};
+  assert.ok(configChecks(m, m.solution).every(x => x[1]));
+  assert.ok(configChecks(m, m.starter).some(x => !x[1]));
+});
+test('v1 backups migrate losslessly and v2 preserves versioned evidence and author drafts', () => {
+  const old = {version: 1, attempts: [{id: 'legacy', missionId: 'M07', at: '2026-01-01T00:00:00Z', mode: 'browser Python', passed: true, hints: 0}], notes: {M07:'Preserve me'}, drafts: {M07:'code'}, designs: [{name:'test', rationale:'why', config:null}]};
+  const p = validateProgress(old);
+  assert.equal(p.version, 2); assert.equal(p.attempts[0].missionVersion, 1);
+  assert.equal(p.notes.M07, 'Preserve me'); assert.equal(p.drafts.M07, 'code');
+  assert.equal(conceptReviews(p, missions)[0].concept, 'aggregation');
+  p.authorDraft = '{"id":"NEW"}';
+  assert.deepEqual(validateProgress(p), p);
+  p.attempts[0].concepts = ['unknown'];
+  assert.throws(() => validateProgress(p), /Invalid attempt/);
+});
+test('review scheduling separates helped work, repetition, transfer and later failure', () => {
+  const p = fresh(); p.attempts.push(at('M07','2026-01-01',1));
+  let row = conceptReviews(p, missions, Date.parse('2026-01-02'))[0];
+  assert.equal(row.due, true); assert.equal(row.transferred, false);
+  p.attempts.push(at('M07','2026-01-02'), at('M07','2026-01-05'));
+  row = conceptReviews(p, missions, Date.parse('2026-01-06'))[0];
+  assert.equal(row.due, false); assert.equal(row.independent.length, 1);
+  assert.equal(row.mission.id, 'M16'); assert.equal(row.transferred, false);
+  p.attempts.push(at('M16','2026-01-06'));
+  row = conceptReviews(p, missions).find(r => r.concept === 'aggregation');
+  assert.equal(row.transferred, true); assert.equal(row.independent.length, 2);
+  p.attempts.push(at('M16','2026-01-07',0,false));
+  row = conceptReviews(p, missions, Date.parse('2026-01-08')).find(r => r.concept === 'aggregation');
+  assert.equal(row.due, true); assert.equal(row.streak, 0);
+});
+test('new content versions preserve old passes but require fresh evidence', () => {
+  const p = fresh(); p.attempts.push(at('M07','2026-01-01'));
+  const updated = {...get('M07'), version: 2};
+  assert.equal(status(p, updated), 'Update available');
+  assert.equal(conceptReviews(p, [updated]).length, 0);
+  assert.equal(nextMission([updated], p).id, 'M07');
+  assert.equal(p.attempts.length, 1);
+});

@@ -5,7 +5,7 @@ import {
   BookOpen,
   CheckCircle2,
 } from "lucide-react";
-import { nextMission, reviewDue, status } from "../lib/progress.mjs";
+import { nextMission, conceptReviews, status } from "../lib/progress.mjs";
 import ServiceMap from "./ServiceMap";
 export default function Home({
   missions,
@@ -16,9 +16,9 @@ export default function Home({
 }) {
   const next = nextMission(missions, progress),
     completed = missions.filter(
-      (m) => status(progress, m.id) !== "Not started",
+      (m) => ["Independent pass", "Completed with help"].includes(status(progress, m)),
     ).length,
-    due = reviewDue(progress);
+    due = conceptReviews(progress, missions).filter(r => r.due).map(r => r.mission.id);
   return (
     <>
       <div className="eyebrow">YOUR ENGINEERING JOURNEY</div>

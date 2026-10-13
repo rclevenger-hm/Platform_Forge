@@ -69,13 +69,13 @@ export default function Portfolio({
         {missions
           .filter(
             (m) =>
-              status(progress, m.id) !== "Not started" || progress.notes[m.id],
+              status(progress, m) !== "Not started" || progress.notes[m.id],
           )
           .map((m) => (
             <article className="panel" key={m.id}>
               <FileCheck2 className="accent" />
               <span className="eyebrow">
-                {m.id} · {status(progress, m.id)}
+                {m.id} · {status(progress, m)}
               </span>
               <h3>{m.title}</h3>
               <p className="preserve">
@@ -135,7 +135,7 @@ export default function Portfolio({
               .reverse()
               .map((a, i) => (
                 <tr key={`${a.id}-${i}`}>
-                  <td>{a.missionId}</td>
+                  <td>{a.missionId} · v{a.missionVersion ?? 1}</td>
                   <td>{a.passed ? "Passed" : "Revisit"}</td>
                   <td>{a.hints ? "Used" : "None recorded"}</td>
                   <td>{a.mode}</td>
