@@ -13,15 +13,23 @@
 
 This foundation is a usable starting point, not the complete senior platform engineering curriculum. Completing it is not a promise of interview success or job readiness.
 
-## Release 0.2: reliable learning and authoring (2–3 engineer-weeks)
+## Shipped in v0.2: learning evidence and authoring
 
-1. Add a mission schema, authoring preview and content version migrations.
-2. Replace template-only shell checks with isolated Bash project exercises. Preserve an explicitly labeled simulation alternative for Pages.
-3. Persist concept-level review scheduling; distinguish remembered solution from transfer to a new variant.
-4. Add accessibility review with keyboard and screen-reader users, plus reduced-motion and contrast audits.
-5. Expand model compatibility adapters and add tutor evaluation cases for grounded hints, hallucinated commands and prompt injection.
+- Twenty missions, including five transfer variants and eleven executable Python exercises.
+- Validated data-driven lesson contracts, prerequisite references and a local Author workbench with import, preview and export.
+- Automatic v1 progress migration, versioned attempt evidence and concept-based review scheduling.
+- Distinct labels for independent repetition and applying an idea to a new variant.
+- Real Bash behavior checks for pipeline failures and shell arguments through the optional isolated runner; standalone template checks remain available.
+- Per-language runner capability reporting, browser integration tests and concept-versus-product visual captures.
 
-Exit criteria: authors can add a lesson without editing UI code; each lesson has positive/negative checks; model outages cannot block completion; upgraded progress survives migration.
+### Remaining v0.2 quality work
+
+1. Review accessibility with keyboard and screen-reader users, including reduced motion and contrast.
+2. Expand model compatibility adapters and evaluate grounded hints, hallucinated commands and prompt injection.
+3. Pilot the learning sequence with practitioners; calibrate review cadence and transfer difficulty.
+4. Move the visual design closer to the original concept: a daily learning plan, richer lab workspace and editable architecture canvas. See [visual review](VISUAL_REVIEW.md).
+
+The curriculum authoring and migration gates are implemented. Practitioner, accessibility and model evaluation gates remain open.
 
 ## Release 0.3: real Linux incident labs (3–5 engineer-weeks)
 
@@ -53,18 +61,18 @@ Estimates assume one experienced full-time engineer and exclude comprehensive co
 
 ## Curriculum map
 
-| Track | First useful outcomes | v0.1 status |
+| Track | First useful outcomes | Current status |
 |---|---|---|
 | Linux | Paths, permissions, processes, disks | 4 simulated missions |
-| Shell and scheduling | Quoting, pipelines, cron, locks | 4 configuration missions |
-| Python | Data processing, testing, errors, retries | 4 executable missions |
-| Algorithms | Complexity, maps, heaps, queues | 1 executable mission |
+| Shell and scheduling | Quoting, pipelines, cron, locks | 5 configuration missions; 3 support Docker Bash |
+| Python | Data processing, testing, errors, retries | 6 executable missions |
+| Algorithms | Complexity, maps, heaps, queues | 2 executable missions |
 | Delivery | Test gates, CI/CD, artifacts, rollback | 1 executable gate exercise |
 | Networking | DNS, TCP, HTTP, TLS, packet reasoning | Planned |
 | Containers | Images, limits, isolation, debugging | Planned curriculum; runner implemented |
 | Infrastructure | IaC, IAM, cloud primitives, state | Planned |
 | Kubernetes | Workloads, scheduling, networking, operations | Planned |
-| Reliability | Idempotency, SLOs, alerts, incidents | 1 executable mission |
+| Reliability | Idempotency, SLOs, alerts, incidents | 2 executable missions |
 | Distributed systems | Replication, consistency, queues, backpressure | Planned |
 | Platform product | APIs, golden paths, developer experience | Planned |
 | System design | Capacity and failure tradeoffs | Interactive teaching model |

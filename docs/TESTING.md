@@ -17,10 +17,13 @@ The Docker CI job builds and starts the Compose application, checks HTTP health,
 ```sh
 docker compose up --build --wait
 docker pull python:3.13-alpine
+docker build --target bash-lab -t platform-forge-bash:0.2 .
 python3 scripts/check_runner.py
 docker compose down
 ```
 
 Run the integration script only on a dedicated lab daemon. It launches and deletes short-lived containers with the `platform-forge.lab=true` label. It does not delete unrelated containers.
 
-Remaining validation beyond v0.1: practitioner review of curriculum, screen-reader testing, representative model/provider compatibility, prolonged runner fault tests, host reboot/orphan cleanup, and adversarial multiuser isolation. These are release gates for the expanded hosted product, not claims made by the current demo.
+Remaining validation beyond v0.2: practitioner review of curriculum, screen-reader testing, representative model/provider compatibility, prolonged runner fault tests, host reboot/orphan cleanup, and adversarial multiuser isolation. These are release gates for the expanded hosted product, not claims made by the current demo.
+
+Release 0.2 adds contract/reference/cycle validation, legacy migration, content-version changes, helped/independent/transfer scheduling, Author import/export validation, and Bash capability/outage fallback. The Docker integration checks every Bash starter fails and every worked solution passes under the actual lab restrictions. The browser suite captures Home, mission practice, Design Lab, Review and Author, plus comparison boards against the original concepts. Download `browser-review` from a successful CI run to inspect the PNG files.

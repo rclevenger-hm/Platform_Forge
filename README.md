@@ -2,7 +2,7 @@
 
 A local-first platform engineering learning environment. Learn by investigating failures, writing code, checking results and explaining tradeoffs.
 
-**v0.1: Relay foundations** — fifteen original missions, a browser Python runtime, a design experiment, interview practice and a portable engineering notebook. No account or LLM required.
+**v0.2: Practice that travels** — twenty original missions, a browser Python runtime, a design experiment, interview practice and a portable engineering notebook. No account or LLM required.
 
 ## What works today
 
@@ -11,13 +11,13 @@ A local-first platform engineering learning environment. Learn by investigating 
 | Lessons, authored hints, worked examples | Yes | Yes | None |
 | Linux terminal and shell/cron teaching models | Yes | Yes | None |
 | Real Python execution | Browser worker | Browser worker | Docker runner also available |
-| Progress, notes and JSON import/export | Browser storage | Browser storage | None |
+| Concept review, versioned progress, notes and JSON import/export | Browser storage | Browser storage | None |
 | Capacity/failure experiment and saved rationale | Yes | Yes | None |
 | Interview prompts, timer and self-review | Yes | Yes | None |
 | Contextual AI mentor | Via your own gateway | Via gateway | Reachable compatible local/remote model |
-| Isolated Docker Python | Via your own gateway | Opt-in labs profile | Dedicated lab Docker daemon |
+| Isolated Docker Python and Bash | Via your own gateway | Opt-in labs profile | Dedicated lab Docker daemon |
 
-The Linux/shell/cron environments are labeled simulations. They do not execute host commands. Python executes real code. Advanced Kubernetes, cloud, networking and production-style incident labs are on the [development roadmap](docs/ROADMAP.md); this release does not claim to teach the entire profession yet.
+Linux/cron teaching models and standalone shell template checks are labeled simulations. Eleven Python missions execute real code in the browser; three shell missions also have optional real Bash behavior checks in isolated Docker containers. Advanced Kubernetes, cloud, networking and production-style incident labs are on the [development roadmap](docs/ROADMAP.md); this release does not claim to teach the entire profession yet.
 
 ## Run the standalone app
 
@@ -64,7 +64,7 @@ The mentor turns on only after the configured model appears in a successful mode
 
 For development without Docker, `python3 server/app.py` starts a loopback-only gateway on port 8787. Export the desired model variables into that process environment; Vite proxies `/api` during development. The server does not automatically read `.env` outside Compose.
 
-### Add Docker Python labs
+### Add Docker Python and Bash labs
 
 Use a **dedicated lab daemon or VM**, preferably rootless. The runner mounts a Docker socket, which grants control of that daemon; it must not share valuable workloads or secrets. The API itself never mounts the socket.
 
@@ -72,10 +72,11 @@ In `.env`, set a separate random `RUNNER_TOKEN`, set `RUNNER_URL=http://runner:8
 
 ```sh
 docker pull python:3.13-alpine
+docker build --target bash-lab -t platform-forge-bash:0.2 .
 docker compose --profile labs up --build -d
 ```
 
-Pre-pull the image on the daemon the runner uses. Check the connection again in Settings, then select **Docker Python** inside a Python mission. Lab containers are non-root, network-disabled, read-only and resource-limited. Shell/systemd/cron VM labs are a later milestone.
+Prepare both images on the daemon the runner uses. Check the connection again in Settings, then select **Docker Python** inside a Python mission or **Docker Bash** in M05, M06 or M20. Languages become available only when their images are installed. Lab containers are non-root, network-disabled, read-only and resource-limited. Full Linux/systemd/cron VM labs are a later milestone.
 
 ## GitHub Pages
 
@@ -97,6 +98,14 @@ npm run test:e2e
 See [validation details](docs/TESTING.md), [architecture and trust boundaries](docs/ARCHITECTURE.md), and the [release roadmap](docs/ROADMAP.md). GitHub Actions additionally builds Compose and exercises the real Docker runner on a disposable CI host.
 
 Mission content lives in `src/data/missions.json`. Each mission includes a briefing, objective, three hints, explanation question, practice checks and a worked solution. These checks support self-study, not certification or anti-cheat enforcement. AI feedback is advisory, and the design simulator explicitly uses illustrative equations rather than measured production benchmarks.
+
+## Author and review lessons
+
+Open **Author** to copy a mission, edit its JSON, validate references and preview the lesson. Export the validated file for repository review. New missions need no UI/grader changes when they use the supported check types. See the [authoring contract](docs/AUTHORING.md).
+
+Open **Review** for concept-based scheduling and transfer exercises. Existing v1 progress migrates automatically; prior content versions stay in Portfolio. Reviews use a transparent practice heuristic, not a mastery score.
+
+See [concepts versus implementation](docs/VISUAL_REVIEW.md) for the original design images, actual release captures and remaining visual goals.
 
 ## Publication history
 
