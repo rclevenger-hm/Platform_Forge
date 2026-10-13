@@ -209,14 +209,14 @@ test('editable architecture affects results and survives saving, reload and reop
   const moved=await page.getByRole('button', {name:'API service node',exact:true}).getAttribute('style');
   await page.getByRole('button', {name:'Add queue & worker path'}).click();
   await page.getByRole('button', {name:'Pin baseline',exact:true}).click();
-  await page.getByLabel('Stop all workers',exact:true).check();
+  await page.getByLabel('Stop all workers',{exact:true}).check();
   await expect(page.getByText('The remaining jobs cannot drain under these conditions.',{exact:false})).toBeVisible();
   await page.getByRole('button', {name:'Run scenario suite'}).click();
   await expect(page.getByRole('rowheader', {name:'Workers stopped',exact:true})).toBeVisible();
   await page.getByLabel('Design rationale').fill('The finite buffer limits memory, but a stopped worker causes rejected jobs.');
   await page.getByRole('button', {name:'Save experiment',exact:true}).click();
   await page.reload();
-  await expect(page.getByLabel('Stop all workers',exact:true)).toBeChecked();
+  await expect(page.getByLabel('Stop all workers',{exact:true})).toBeChecked();
   expect(await page.getByRole('button', {name:'API service node',exact:true}).getAttribute('style')).toBe(moved);
   await page.getByRole('button', {name:'Portfolio',exact:true}).click();
   await page.getByRole('button', {name:'Reopen design',exact:true}).click();

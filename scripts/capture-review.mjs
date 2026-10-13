@@ -20,7 +20,7 @@ export async function captureReview(page, missions) {
   await page.getByRole('button', {name:'Design Lab',exact:true}).click();
   await page.getByRole('button', {name:'Add queue & worker path'}).click();
   await page.getByRole('button', {name:'Pin baseline',exact:true}).click();
-  await page.getByLabel('Stop all workers',exact:true).check();
+  await page.getByLabel('Stop all workers',{exact:true}).check();
   await page.getByRole('button', {name:'Run scenario suite'}).click();
   await capture('design');
   await capture('design-full', true);
