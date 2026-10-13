@@ -39,15 +39,18 @@ const nav = [
 ];
 function route() {
   try {
-    const value = decodeURIComponent(location.hash.slice(1));
+    const value = decodeURIComponent(location.hash.slice(1)).split("/")[0];
     return nav.some(([n]) => n === value) ? value : "Home";
   } catch {
     return "Home";
   }
 }
+function routedMission() {
+  try { const [page,id] = decodeURIComponent(location.hash.slice(1)).split("/"); return page === "Practice" && missions.some(m => m.id === id) ? id : "M01"; } catch { return "M01"; }
+}
 export default function App() {
   const [page, setPage] = useState(route),
-    [missionId, setMissionId] = useState("M01"),
+    [missionId, setMissionId] = useState(routedMission),
     [mobile, setMobile] = useState(false),
     [progress, setProgress] = useState(() => {
       try {
@@ -64,7 +67,7 @@ export default function App() {
       connected: false,
     });
   useEffect(() => {
-    const onHash = () => setPage(route());
+    const onHash = () => { setPage(route()); if (route() === "Practice") setMissionId(routedMission()); };
     addEventListener("hashchange", onHash);
     return () => removeEventListener("hashchange", onHash);
   }, []);
@@ -85,15 +88,16 @@ export default function App() {
       .catch(() => {});
     return () => c.abort();
   }, []);
-  function navigate(name) {
+  function navigate(name, id = missionId) {
     setPage(name);
-    location.hash = encodeURIComponent(name);
+    location.hash = encodeURIComponent(name === "Practice" ? `Practice/${id}` : name);
     setMobile(false);
     window.scrollTo({ top: 0 });
   }
   function openMission(id) {
+    if (!missions.some(m => m.id === id)) return navigate("Campaign");
     setMissionId(id);
-    navigate("Practice");
+    navigate("Practice", id);
   }
   const common = {
     missions,
@@ -167,7 +171,7 @@ export default function App() {
           >
             Open source <ExternalLink size={13} />
           </a>
-          <small>v0.2 · Practice that travels</small>
+          <small>v0.2.1 · Guided practice</small>
         </div>
       </aside>
       <div className="main-shell">

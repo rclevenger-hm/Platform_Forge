@@ -15,6 +15,9 @@ import {
 import { makeAttempt, prerequisitesMissing } from "../lib/progress.mjs";
 import { runPython } from "../lib/python.mjs";
 import { request } from "../lib/api.mjs";
+import IncidentNotebook from "./IncidentNotebook";
+import WorkspaceTabs from "./WorkspaceTabs";
+import { stageEvidence } from "../lib/journal.mjs";
 import Tutor from "./Tutor";
 export default function Practice({
   mission: m,
@@ -39,9 +42,12 @@ export default function Practice({
     [output, setOutput] = useState(""),
     [busy, setBusy] = useState(false),
     [result, setResult] = useState(null),
-    [engine, setEngine] = useState("browser");
+    [engine, setEngine] = useState("browser"),
+    [workspaceTab, setWorkspaceTab] = useState("Workspace"),
+    [selectedFile, setSelectedFile] = useState("");
   const language = m.runtime || m.kind;
   const dockerReady = capabilities.runner && (capabilities.runnerLanguages || ["python"]).includes(language);
+  const stages = stageEvidence(m, progress.incidents?.[m.id], progress.attempts, progress.notes[m.id]);
   const worker = useRef(null),
     mounted = useRef(true);
   useEffect(() => {
@@ -133,9 +139,16 @@ export default function Practice({
         {prerequisitesMissing(m, missions, progress).map(pre => <button key={pre.id} className="text-button" onClick={() => openMission(pre.id)}>{pre.id} · {pre.title}</button>)}
         <small>You can still explore this mission now.</small>
       </div>}
+      <nav className="incident-stages" aria-label="Incident learning stages">
+        {stages.map((stage,i) => <button key={stage.name} className={stage.done ? "done" : ""} onClick={() => {
+          if (stage.target === "workspace") setWorkspaceTab("Workspace");
+          const element = document.getElementById(`mission-${stage.target}`);
+          element?.scrollIntoView({block:"start", behavior:"auto"}); element?.focus();
+        }}><span>{stage.done ? "✓" : i + 1}</span><strong>{stage.name}</strong><small>{stage.detail}</small></button>)}
+      </nav>
       <div className="lab-layout">
         <div className="lesson-column">
-          <section className="panel lesson">
+          <section className="panel lesson" id="mission-briefing" tabIndex={-1}>
             <span className="eyebrow">01 / UNDERSTAND</span>
             <h2>Your briefing</h2>
             {m.lesson.map((p) => (
@@ -172,6 +185,7 @@ export default function Practice({
               </p>
             </details>
           </section>
+          <IncidentNotebook mission={m} progress={progress} setProgress={setProgress}/>
           <Tutor
             mission={m}
             code={m.kind === "terminal" ? log.join("\n") : code}
@@ -182,7 +196,8 @@ export default function Practice({
           />
         </div>
         <div className="workspace-column">
-          <section className="panel workspace">
+          <section className="panel workspace" id="mission-workspace" tabIndex={-1}>
+            <WorkspaceTabs tabs={["Workspace", "Files", "Checks", "History"]} value={workspaceTab} onChange={setWorkspaceTab}/>
             <div className="workspace-bar">
               <span>
                 {m.kind === "terminal" ? "relay-sim" : m.path || "solution.py"}
@@ -203,6 +218,8 @@ export default function Practice({
                 onClick={() => {
                   edit(m.starter || "");
                   setState(initialTerminal());
+                  setSelectedFile("");
+                  setWorkspaceTab("Workspace");
                   setLog(["Environment reset. Type help."]);
                   setChecks([]);
                   setOutput("");
@@ -213,6 +230,7 @@ export default function Practice({
                 <RotateCcw size={15} />
               </button>
             </div>
+            <div role="tabpanel" id="workspace-panel-Workspace" aria-labelledby="workspace-tab-Workspace" hidden={workspaceTab !== "Workspace"}>
             {m.kind === "terminal" ? (
               <div className="terminal">
                 <pre aria-live="polite">{log.join("\n")}</pre>
@@ -238,13 +256,32 @@ export default function Practice({
                 maxLength={24000}
               />
             )}
+            </div>
+            <div className="file-browser" role="tabpanel" id="workspace-panel-Files" aria-labelledby="workspace-tab-Files" hidden={workspaceTab !== "Files"}>
+              {m.kind === "terminal" ? <><div className="file-list" aria-label="Simulated files">{Object.keys(state.files).map(path => <button key={path} aria-pressed={selectedFile === path} onClick={() => {
+                setSelectedFile(path); setState(s => ({...s, read:[...new Set([...s.read, path])]})); setResult(null);
+              }}>{path}</button>)}</div><h3>{selectedFile || "Select a file to inspect"}</h3><pre>{state.files[selectedFile]}</pre><small>Read-only view of the teaching model. Selecting a file records an inspection.</small></> : <><h3>{m.path || "solution.py"}</h3><pre>{code}</pre><small>Your current draft. Edit it in Workspace.</small></>}
+            </div>
+            <div className="check-contract" role="tabpanel" id="workspace-panel-Checks" aria-labelledby="workspace-tab-Checks" hidden={workspaceTab !== "Checks"}>
+              <h3>What the checks establish</h3><p>{m.objective}</p>
+              {m.checks && <ul>{m.checks.map(c => <li key={c.label}>{c.label}</li>)}</ul>}
+              {m.kind === "python" && <pre>{m.tests}</pre>}
+              {m.cases && <><h3>Optional Bash behavior cases</h3><ul>{m.cases.map(c => <li key={c.label}>{c.label}</li>)}</ul></>}
+              <p>Passing these practice checks is evidence for the lesson contract. Explain limitations in your verification note.</p>
+            </div>
+            <div className="workspace-history" role="tabpanel" id="workspace-panel-History" aria-labelledby="workspace-tab-History" hidden={workspaceTab !== "History"}>
+              <h3>Submitted attempts</h3>
+              {progress.attempts.filter(a => a.missionId === m.id).slice(-10).reverse().map(a => <p key={a.id}>{a.passed ? "Passed" : "Needs another attempt"} · v{a.missionVersion ?? 1} · {a.mode} · {new Date(a.at).toLocaleString()}</p>)}
+              {!progress.attempts.some(a => a.missionId === m.id) && <p>No submitted attempts yet.</p>}
+              {m.kind === "terminal" && <><h3>Current simulation transcript</h3><pre>{log.join("\n")}</pre></>}
+            </div>
             <div className="workspace-footer">
               {m.kind === "python"
                 ? "Python runs in a disposable browser worker, or an isolated Docker container when connected."
                 : m.runtime === "bash" ? "Standalone mode checks the lesson template. Connect a Bash runner to execute behavior checks in Docker." : "A bounded teaching model. Commands and configuration checks do not execute on the host."}
             </div>
           </section>
-          <section className="panel quiz">
+          <section className="panel quiz" id="mission-checks" tabIndex={-1}>
             <span className="eyebrow">02 / EXPLAIN</span>
             <h3>{m.quiz[0]}</h3>
             {m.quiz.slice(1).map((answer, i) => (
@@ -302,7 +339,7 @@ export default function Practice({
               </pre>
             )}
           </section>
-          <section className="panel">
+          <section className="panel" id="mission-handoff" tabIndex={-1}>
             <h3>
               <CheckCircle2 size={18} /> Leave a handoff
             </h3>
@@ -314,6 +351,7 @@ export default function Practice({
                 setProgress((p) => ({
                   ...p,
                   notes: { ...p.notes, [m.id]: e.target.value },
+                  noteTimes: {...p.noteTimes, [m.id]:new Date().toISOString()},
                 }))
               }
               placeholder="What happened? What did you change? How did you verify it?"

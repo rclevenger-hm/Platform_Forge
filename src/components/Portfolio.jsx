@@ -1,11 +1,13 @@
 import { useRef, useState } from "react";
 import { Download, Upload, FileCheck2 } from "lucide-react";
+import { JOURNAL_FIELDS, journalMarkdown } from "../lib/journal.mjs";
 import { validateProgress, status } from "../lib/progress.mjs";
 export default function Portfolio({
   progress,
   setProgress,
   missions,
   openMission,
+  navigate,
 }) {
   const file = useRef(),
     [message, setMessage] = useState("");
@@ -18,6 +20,11 @@ export default function Portfolio({
     a.href = url;
     a.download = `platform-forge-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function downloadJournal() {
+    const url = URL.createObjectURL(new Blob([journalMarkdown(missions, progress)], {type:"text/markdown"}));
+    const a = document.createElement("a"); a.href = url; a.download = "platform-forge-journal.md"; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   async function restore(e) {
@@ -56,6 +63,7 @@ export default function Portfolio({
         <button onClick={() => file.current.click()}>
           <Upload size={16} /> Import backup
         </button>
+        <button onClick={downloadJournal}><Download size={16}/> Export incident journal</button>
         <input
           hidden
           ref={file}
@@ -69,7 +77,7 @@ export default function Portfolio({
         {missions
           .filter(
             (m) =>
-              status(progress, m) !== "Not started" || progress.notes[m.id],
+              status(progress, m) !== "Not started" || progress.notes[m.id] || progress.incidents?.[m.id],
           )
           .map((m) => (
             <article className="panel" key={m.id}>
@@ -82,11 +90,12 @@ export default function Portfolio({
                 {progress.notes[m.id] ||
                   "Add a handoff note to explain your approach."}
               </p>
+              {progress.incidents?.[m.id] && <details><summary>Incident reasoning · v{progress.incidents[m.id].version}</summary>{JOURNAL_FIELDS.map(key => progress.incidents[m.id][key] && <div key={key}><strong>{key[0].toUpperCase()+key.slice(1)}</strong><p className="preserve">{progress.incidents[m.id][key]}</p></div>)}</details>}
               <button onClick={() => openMission(m.id)}>Revisit mission</button>
             </article>
           ))}
       </div>
-      {!progress.attempts.length && !Object.keys(progress.notes).length && (
+      {!progress.attempts.length && !Object.keys(progress.notes).length && !Object.keys(progress.incidents || {}).length && (
         <div className="panel empty">
           <FileCheck2 />
           <h2>Your first fix belongs here.</h2>
@@ -112,6 +121,10 @@ export default function Portfolio({
                 {d.config.nodes} replicas · {d.config.traffic} req/s ·{" "}
                 {d.config.cache}% cache hits
               </small>
+              {d.graph && <button onClick={() => {
+                setProgress(p => ({...p,designDraft:{name:d.name, rationale:d.rationale, config:d.config, graph:d.graph, baseline:d.baseline || null}}));
+                navigate("Design Lab");
+              }}>Reopen design</button>}
             </article>
           ))
       ) : (
