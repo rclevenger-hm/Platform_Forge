@@ -22,7 +22,7 @@ CMD ["python", "server/app.py"]
 FROM python:3.13-alpine AS runner
 RUN apk add --no-cache docker-cli
 WORKDIR /app
-COPY server/runner.py server/runner.py
+COPY server/runner.py server/jobs.py server/
 COPY src/data/missions.json src/data/missions.json
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 EXPOSE 8788
