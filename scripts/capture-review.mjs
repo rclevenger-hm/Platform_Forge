@@ -4,6 +4,9 @@ const dataUrl = async path => `data:image/png;base64,${(await readFile(path)).to
 export async function captureReview(page, missions) {
   await mkdir(folder, {recursive:true});
   async function capture(name, fullPage = false) {
+    // Controls lower on the page scroll into view during setup. Capture each
+    // screen from its heading, including fixed navigation in full-page images.
+    await page.evaluate(() => window.scrollTo({top:0, left:0, behavior:'instant'}));
     await page.mouse.move(1430, 1);
     await page.screenshot({path: `${folder}/${name}.png`, fullPage, animations: 'disabled'});
   }
