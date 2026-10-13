@@ -133,6 +133,7 @@ export default function App() {
         <nav aria-label="Main navigation">
           {nav.map(([name, Icon]) => (
             <button
+              aria-label={name}
               className={page === name ? "active" : ""}
               aria-current={page === name ? "page" : undefined}
               key={name}

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "pretest": "npm run prepare:python",
     "dev": "vite --host 127.0.0.1",
     "prepare:python": "node scripts/vendor-python.mjs",
     "build": "npm run prepare:python && vite build",

@@ -21,6 +21,15 @@ jobs:
       - run: npm run test:server
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Report browser failure context
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for path in Path('test-results').rglob('error-context.md'):
+              print(path)
+              print(path.read_text()[:14000])
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:

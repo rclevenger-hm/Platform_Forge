@@ -62,14 +62,18 @@ test("bundled Python really executes successful and failing code without a CDN",
   await expect(page.getByText("Keep investigating.")).toBeVisible({
     timeout: 70000,
   });
+  await expect(page.getByLabel("Execution output")).toContainText(
+    "AssertionError",
+  );
   await page.getByLabel("Code editor").fill(m.solution);
   await page.getByRole("button", { name: "Run checks & submit" }).click();
-  await expect(page.getByText("Mission complete. Nice work.")).toBeVisible({
-    timeout: 70000,
-  });
+  await expect(
+    page.getByRole("button", { name: "Run checks & submit" }),
+  ).toBeEnabled({ timeout: 70000 });
   await expect(page.getByLabel("Execution output")).toContainText(
     "All practice checks passed.",
   );
+  await expect(page.getByText("Mission complete. Nice work.")).toBeVisible();
   expect(remote).toEqual([]);
 });
 test("mobile navigation and layout fit a narrow viewport", async ({ page }) => {
