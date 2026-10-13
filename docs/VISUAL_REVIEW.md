@@ -12,6 +12,24 @@ The three original AI-generated images are design targets, not screenshots. The 
 
 The standalone captures show the tutor disconnected. The original concepts show an optional tutor-connected state. Review screenshots use explicitly labeled test-fixture progress, not a real learner's activity.
 
+## Release comparison boards
+
+Captured from commit `74844cc5253eb723a734fc13f759b77f757065a0` by [successful browser and Docker CI](https://github.com/rclevenger-hm/Platform_Forge/actions/runs/38350034472). The original images are on the left; actual browser screenshots are on the right.
+
+### Home
+
+![Home: original concept versus implemented product](screenshots/v0.2/comparison-home.png)
+
+### Mission workspace
+
+![Mission: original concept versus implemented product](screenshots/v0.2/comparison-mission.png)
+
+### Design Lab
+
+![Design Lab: original concept versus implemented product](screenshots/v0.2/comparison-design.png)
+
+Full captures: [Home](screenshots/v0.2/home-full.png), [Practice](screenshots/v0.2/mission-full.png), [Design Lab](screenshots/v0.2/design-full.png), [Review with demo progress](screenshots/v0.2/review.png), [Author](screenshots/v0.2/author.png).
+
 ## Original Home concept
 
 ![AI-generated Home concept](design-concepts/home.png)
