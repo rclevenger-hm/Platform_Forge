@@ -6,11 +6,13 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { nextMission, conceptReviews, status } from "../lib/progress.mjs";
+import DailyPlan from "./DailyPlan";
 import ServiceMap from "./ServiceMap";
 export default function Home({
   missions,
   tracks,
   progress,
+  setProgress,
   openMission,
   navigate,
 }) {
@@ -30,6 +32,7 @@ export default function Home({
       <p className="lede">
         A hands-on path from your first shell command to resilient platforms.
       </p>
+      <div className="home-focus">
       <section className="hero panel">
         <div>
           <span className="tag lime">CAMPAIGN 01 · RELAY</span>
@@ -51,6 +54,8 @@ export default function Home({
         </div>
         <ServiceMap />
       </section>
+      <DailyPlan {...{missions, progress, setProgress, openMission, navigate}}/>
+      </div>
       <div className="stats">
         <div className="panel stat">
           <CheckCircle2 />
