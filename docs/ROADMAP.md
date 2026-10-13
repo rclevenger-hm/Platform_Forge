@@ -42,9 +42,19 @@ The curriculum authoring and migration gates are implemented. Practitioner, acce
 
 The canvas supports a bounded set of component roles and paths. The simulations remain explicit teaching models; they do not run infrastructure or predict real performance. Real VM labs remain the next runtime milestone.
 
+## Shipped in v0.2.2: accounts and managed runs
+
+- Individual SQLite-backed accounts, password hashing, revocable cookie sessions and CSRF checks.
+- Automatic progress synchronization, per-account browser recovery, explicit guest imports, conflict resolution and operator password reset.
+- Managed Docker jobs with state, cancellation, capacity limits, immutable image identity, TTL cleanup and audit metadata.
+- Gateway job ownership, retained execution evidence, and progress schema v4 migration from v1/v2/v3.
+- Browser cross-device/account conflict flows and Docker persistence/restart/orphan cleanup integration checks.
+
+Accounts were brought forward at the user's request. Public multiuser sandbox hardening, OAuth/MFA, self-service recovery and full VM labs remain open. Pages includes login UI but requires an externally hosted backend for accounts.
+
 ## Release 0.3: real Linux incident labs (3–5 engineer-weeks)
 
-1. Introduce a runner protocol with job lifecycle, cancellation, TTL cleanup, image digests and audit events.
+1. Extend the shipped runner protocol with durable orchestration, independent cleanup/watchdog guarantees and host crash recovery.
 2. Build disposable Linux VM labs for systemd, cron, disk pressure, networking and permissions. Containers alone cannot reproduce every host incident.
 3. Add reproducible seeds, reset/snapshot controls, external validators and protected learner workspaces.
 4. Add a dedicated lab-host deployment. Evaluate gVisor or microVM isolation before any untrusted multiuser hosting.
@@ -66,7 +76,7 @@ Exit criteria: learner defends a design with assumptions and evidence, runs a ga
 
 ## Release 1.0: capstone and interview readiness (3–5 engineer-weeks)
 
-Ship a production-style capstone, incident rotation, coding variants, system design practice, behavioral evidence and portfolio export. Add accounts/sync only after data ownership, authentication, backup and migration requirements are settled. Human-reviewed rubrics remain the source of truth for open-ended work.
+Ship a production-style capstone, incident rotation, coding variants, system design practice, behavioral evidence and portfolio export. Extend the shipped local-group accounts with public-service identity, recovery and administration requirements. Human-reviewed rubrics remain the source of truth for open-ended work.
 
 Estimates assume one experienced full-time engineer and exclude comprehensive content review. They are planning ranges, not delivery promises. Full curriculum quality requires practitioner review and pilot learners.
 

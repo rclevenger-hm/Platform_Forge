@@ -2,7 +2,7 @@
 
 A local-first platform engineering learning environment. Learn by investigating failures, writing code, checking results and explaining tradeoffs.
 
-**v0.2.1: Guided practice** — twenty original missions, a browser Python runtime, an editable architecture lab, daily practice plans, interview practice and a portable engineering notebook. No account or LLM required.
+**v0.2.2: Accounts and managed runs** — twenty original missions, a browser Python runtime, an editable architecture lab, daily practice plans, interview practice and a portable engineering notebook, individual accounts with synchronized progress, and cancellable Docker runs. Guest learning needs no account or LLM.
 
 ## What works today
 
@@ -14,6 +14,7 @@ A local-first platform engineering learning environment. Learn by investigating 
 | Concept review, versioned progress, notes and JSON import/export | Browser storage | Browser storage | None |
 | Editable architecture, queue/failure scenarios and saved rationale | Yes | Yes | None |
 | Interview prompts, timer and self-review | Yes | Yes | None |
+| Individual login and cross-device progress | Via your own backend | SQLite account volume | No LLM needed |
 | Contextual AI mentor | Via your own gateway | Via gateway | Reachable compatible local/remote model |
 | Isolated Docker Python and Bash | Via your own gateway | Opt-in labs profile | Dedicated lab Docker daemon |
 
@@ -48,7 +49,7 @@ Requires Docker Engine/Desktop and the Compose plugin.
 docker compose up --build -d
 ```
 
-Open **http://localhost:8080**. Core learning works with no configuration. Optional backend requests require a token when arriving through the Docker frontend; the default empty token intentionally leaves those features disconnected.
+Open **http://localhost:8080**. Core learning and account registration work with no configuration. Select **Sign in → Create account** to save work across devices. Accounts persist in the `account-data` volume. Signed-in users can use configured optional services; the operator token remains an alternative for local administration. See [account setup, synchronization and recovery](docs/ACCOUNTS.md).
 
 ### Connect a local or remote LLM
 
@@ -56,7 +57,7 @@ Open **http://localhost:8080**. Core learning works with no configuration. Optio
 2. Set `API_TOKEN` to a random value. Generate one with `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`.
 3. Set `LLM_BASE_URL` to a compatible API base, including `/v1`, and `LLM_MODEL` to an available model ID. Set `LLM_API_KEY` only if the provider needs one.
 4. Recreate the service with `docker compose up --build -d`.
-5. In **Settings**, leave the backend URL blank, enter your `API_TOKEN`, and select **Check connection**.
+5. Sign in with your individual account and select **Settings → Check connection**, or use the operator token while signed out. Leave the backend URL blank for the Docker frontend.
 
 For Ollama on the Docker host, a typical base is `http://host.docker.internal:11434/v1`. Pull your chosen model in Ollama first and ensure its server is reachable from the container. For a hosted provider, use its HTTPS OpenAI-compatible base and credentials. Exact parameter compatibility varies; this gateway uses `GET /models` and `POST /chat/completions` with `max_tokens`.
 
@@ -76,6 +77,8 @@ docker build --target bash-lab -t platform-forge-bash:0.2 .
 docker compose --profile labs up --build -d
 ```
 
+Managed runs support cancellation, image identity, cleanup status and retained execution records. Read the [managed-run protocol](docs/MANAGED_RUNS.md).
+
 Prepare both images on the daemon the runner uses. Check the connection again in Settings, then select **Docker Python** inside a Python mission or **Docker Bash** in M05, M06 or M20. Languages become available only when their images are installed. Lab containers are non-root, network-disabled, read-only and resource-limited. Full Linux/systemd/cron VM labs are a later milestone.
 
 ## GitHub Pages
@@ -84,7 +87,7 @@ The `Publish standalone edition` workflow builds the complete non-LLM frontend w
 
 Initial repository setup: open **Settings → Pages → Build and deployment → Source → GitHub Actions**. Then run **Actions → Publish standalone edition → Run workflow** (or push a commit). The expected address is `https://rclevenger-hm.github.io/Platform_Forge/`; it becomes live after a successful deployment. The workflow reports and skips deployment if Pages is not yet enabled; building an artifact alone does not make a live site.
 
-To connect that static edition to your own gateway, expose the gateway over HTTPS, configure an access token, and add `https://rclevenger-hm.github.io` to `ALLOWED_ORIGINS`. Enter the gateway URL and token in Settings. An HTTPS page may be unable to call a private or HTTP endpoint because of browser network policies; the local Docker frontend is the straightforward local-model setup.
+To connect that static edition to your own gateway, expose the gateway over HTTPS and add `https://rclevenger-hm.github.io` to `ALLOWED_ORIGINS`. For accounts, configure secure cross-site session cookies as described in the [account guide](docs/ACCOUNTS.md), enter the gateway URL in Settings, then sign in from Account. Operator tokens remain an alternative for optional services. An HTTPS page may be unable to call a private or HTTP endpoint because of browser network policies; the local Docker frontend is the straightforward local-model setup.
 
 ## Development and validation
 
