@@ -1,17 +1,23 @@
+import { cleanGraph, cleanDesignConfig } from "./architecture.mjs";
+import { cleanJournal } from "./journal.mjs";
 import { CONCEPTS } from "./curriculum.mjs";
 export const KEY = "platform-forge:v1";
 export const fresh = () => ({
-  version: 2,
+  version: 3,
   attempts: [],
   notes: {},
   drafts: {},
   designs: [],
   authorDraft: "",
+  dailyPlan: null,
+  designDraft: null,
+  incidents: {},
+  noteTimes: {},
 });
 export function validateProgress(v) {
   if (
     !v ||
-    ![1, 2].includes(v.version) ||
+    ![1, 2, 3].includes(v.version) ||
     !Array.isArray(v.attempts) ||
     v.attempts.length > 10000
   )
@@ -20,7 +26,7 @@ export function validateProgress(v) {
   clean.attempts = v.attempts.map((a) => {
     if (
       !a ||
-      (v.version === 2 && (!Number.isInteger(a.missionVersion) || a.missionVersion < 1 || !Array.isArray(a.concepts) || a.concepts.length > 30 || !a.concepts.every(c => Object.hasOwn(CONCEPTS, c)))) ||
+      (v.version >= 2 && (!Number.isInteger(a.missionVersion) || a.missionVersion < 1 || !Array.isArray(a.concepts) || a.concepts.length > 30 || !a.concepts.every(c => Object.hasOwn(CONCEPTS, c)))) ||
       typeof a.missionId !== "string" ||
       a.missionId.length > 80 ||
       !["browser simulation", "browser Python", "Docker lab"].includes(
@@ -65,10 +71,36 @@ export function validateProgress(v) {
           rationale: x.rationale.slice(0, 10000),
           at: String(x.at),
           config: safeConfig(x.config),
+          ...(safeDesign(x) || {}),
         }))
     : [];
+  clean.designDraft = safeDesign(v.designDraft, true);
   clean.authorDraft = typeof v.authorDraft === "string" ? v.authorDraft.slice(0, 250000) : "";
+  for (const [id, value] of Object.entries(v.incidents && typeof v.incidents === "object" ? v.incidents : {}).slice(0, 300)) {
+    const record = cleanJournal(value);
+    if (/^[A-Z][A-Z0-9_-]{1,39}$/.test(id) && record) clean.incidents[id] = record;
+  }
+  for (const [id, at] of Object.entries(v.noteTimes && typeof v.noteTimes === "object" ? v.noteTimes : {}).slice(0, 300)) {
+    if (/^[A-Z][A-Z0-9_-]{1,39}$/.test(id) && typeof at === "string" && Number.isFinite(Date.parse(at))) clean.noteTimes[id] = at;
+  }
+  const plan = v.dailyPlan;
+  if (plan && /^\d{4}-\d{2}-\d{2}$/.test(plan.date) && [15, 30, 60].includes(plan.budget) && Number.isFinite(Date.parse(plan.createdAt)) && Array.isArray(plan.items) && plan.items.length <= 6) {
+    const items = plan.items.filter(x => x && ["mission", "observe", "handoff", "design"].includes(x.kind) && Number.isInteger(x.minutes) && x.minutes > 0 && x.minutes <= 60 && (x.kind === "design" || (/^[A-Z][A-Z0-9_-]{1,39}$/.test(x.missionId) && Number.isInteger(x.version) && x.version > 0)))
+      .map(x => ({kind:x.kind, ...(x.kind === "design" ? {} : {missionId:x.missionId, version:x.version}), minutes:x.minutes, reason:String(x.reason || "").slice(0,300)}));
+    if (items.length === plan.items.length && items.reduce((n,x) => n + x.minutes, 0) <= plan.budget) clean.dailyPlan = {date:plan.date, budget:plan.budget, createdAt:plan.createdAt, items};
+  }
   return clean;
+}
+function safeDesign(value, draft = false) {
+  if (!value || !value.graph) return null;
+  try {
+    const graph = cleanGraph(value.graph), config = cleanDesignConfig(value.config);
+    let baseline = null;
+    if (value.baseline?.graph) {
+      try { baseline = {graph:cleanGraph(value.baseline.graph),config:cleanDesignConfig(value.baseline.config)}; } catch { /* Keep valid current work if only the baseline is invalid. */ }
+    }
+    return {graph, config, baseline, ...(draft ? {name:typeof value.name === "string" ? value.name.slice(0,150) : "Relay architecture experiment", rationale:typeof value.rationale === "string" ? value.rationale.slice(0,10000) : ""} : {modelVersion:1})};
+  } catch { return null; }
 }
 function safeConfig(c = {}) {
   return Object.fromEntries(
