@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plug, Zap, ShieldCheck } from "lucide-react";
 import { normalizeUrl, request } from "../lib/api.mjs";
+import { createConnectionCheck } from "../lib/connection.mjs";
 export default function Settings({
   account,
   settings,
@@ -12,27 +13,38 @@ export default function Settings({
     [token, setToken] = useState(settings.token),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
+  const check = useRef(null);
+  if (!check.current) check.current = createConnectionCheck();
+  useEffect(() => () => check.current.cancel(), []);
   async function connect(e) {
     e.preventDefault();
+    const operation = check.current.start();
     setBusy(true);
+    setMessage("");
     try {
       const next = { ...settings, url: normalizeUrl(url), token };
-      const auth = await request(next, "auth/status").catch(() => null);
+      const auth = await request(next, "auth/status", undefined, operation.signal).catch(() => null);
+      if (!operation.current()) return;
       let result;
-      try { result = await request(next, "capabilities"); }
+      try { result = await request(next, "capabilities", undefined, operation.signal); }
       catch (error) {
         if (!auth?.available) throw error;
         result = {connected:true,tutor:false,runner:false};
       }
+      if (!operation.current()) return;
       account.refreshAvailability(auth || {available:false});
       setSettings(next);
       setCapabilities(result);
       setMessage("Backend connected. Sign in from Account to save your progress.");
     } catch (e) {
+      if (!operation.current()) return;
       setCapabilities({ tutor: false, runner: false, connected: false });
       setMessage(e.message);
     } finally {
-      setBusy(false);
+      if (operation.current()) {
+        setBusy(false);
+        operation.finish();
+      }
     }
   }
   return (
@@ -84,6 +96,9 @@ export default function Settings({
               type="button"
               disabled={!!account.session}
               onClick={() => {
+                check.current.cancel();
+                setBusy(false);
+                account.refreshAvailability({available:false});
                 setSettings({ url: "", token: "" });
                 setCapabilities({
                   tutor: false,
