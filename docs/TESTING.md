@@ -34,3 +34,9 @@ Release 0.2.1 covers daily-plan budgets/prerequisites and evidence timestamps; v
 Release 0.2.2 adds real HTTP account tests for registration/login, persistent salted credentials, session expiry/revocation, secure cookie attributes, CSRF/origin enforcement, account isolation, optimistic conflicts, rate/size limits and job ownership. Browser tests start a disposable SQLite API on port 8789 and exercise guest import, two browser contexts, logout, conflicts, offline recovery, and the Pages login explanation. Managed-run browser checks distinguish cancelled work from practice attempts.
 
 Docker CI verifies progress and sessions through an API restart, then exercises cancellation and restart-style expired-container recovery on the dedicated CI daemon. The unit suite rejects malformed runtime evidence and verifies explicit guest merging. Browser review artifacts include sign-in and signed-in account screens from a disposable test account.
+
+Backend connection checks are scoped to the Settings screen. Unit checks cover
+cancellation, replacement and stale cleanup. Delayed-response browser regressions
+verify that Disconnect or navigation prevents late success/failure from changing
+the selected backend, that cancelled discovery does not start a capability check,
+and that an older response cannot overwrite a newer successful connection.
