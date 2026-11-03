@@ -22,6 +22,12 @@ Signed-in users can use the server's configured optional tutor and runner. They 
 - A failed sync retains the device copy and shows a warning. Retry after reconnecting. Signing back in restores an unsynced recovery copy; if the server also changed, it asks which to keep.
 - Progress is bounded to 2 MB per account. Export before trimming history. Browser exports and account data are practice records, not a tamper-proof assessment.
 
+Guest imports merge attempts, design experiments and managed runs in chronological
+order before retaining the newest 10,000 attempts and 100 designs/runs. Account
+copies win duplicate identities, and account notes still take precedence. Legacy
+designs without valid dates sort before dated experiments. This keeps newer guest
+evidence from being displaced solely because it came from the guest workspace.
+
 Use **Sign out** on a shared computer. Local recovery copies are not encrypted and browser storage is accessible to code in the learning origin. Browser Python is self-study execution, not a security boundary for untrusted pasted code.
 
 ## Persistence and recovery
